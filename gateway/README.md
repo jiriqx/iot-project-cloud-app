@@ -18,3 +18,17 @@ Benefit: this enables communication from the server to nodes without assigning a
 2. The gateway resolves the server IP address, encrypts the message, and forwards it to the server.
 
 Benefit: only the gateway needs to handle DNS resolution and encryption.
+
+## Local Development
+
+### Consumer
+
+```sh
+npm run consume
+```
+
+### Producer
+
+```sh
+npm run produce
+```
