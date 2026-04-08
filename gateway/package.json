@@ -1,0 +1,17 @@
+{
+  "name": "gateway",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "ts-node src/server.ts",
+    "fake-client": "ts-node src/fake-client.ts"
+  },
+  "dependencies": {
+    "mqtt": "^5"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "ts-node": "^10",
+    "typescript": "^5"
+  }
+}
