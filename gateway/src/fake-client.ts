@@ -1,24 +1,18 @@
 import mqtt from 'mqtt';
-import type { WebServerCommandRequest } from './types';
 
-// --- Configuration ---
+// Simulates what the cloud server sends to trigger a light command.
+// Topic:   {gatewayId}/{deviceId}/command
+// Payload: "command=on" | "command=off"
 
-const MQTT_HOST = 'x1d65c51.ala.eu-central-1.emqxsl.com';
-const MQTT_PORT = 8883;
-const MQTT_USERNAME = 'administrator';
-const MQTT_PASSWORD = 'wrswPB5hPH54jzU';
+const MQTT_HOST = process.env.MQTT_HOST!;
+const MQTT_PORT = Number(process.env.MQTT_PORT ?? 8883);
+const MQTT_USERNAME = process.env.MQTT_USERNAME!;
+const MQTT_PASSWORD = process.env.MQTT_PASSWORD!;
 
 const GATEWAY_ID = 'gateway-1';
-
-// --- Publish a test command ---
-// Simulates what the cloud server would send to the gateway.
-// Change command to 'off' to test turning off.
-
-const command: WebServerCommandRequest = {
-  command: 'on',
-  deviceId: 'light-1',
-  gatewayId: GATEWAY_ID,
-};
+const DEVICE_ID = 'light-1';
+const topic = `${GATEWAY_ID}/${DEVICE_ID}/command`;
+const message = 'command=on';
 
 const client = mqtt.connect(`mqtts://${MQTT_HOST}:${MQTT_PORT}`, {
   username: MQTT_USERNAME,
@@ -27,9 +21,9 @@ const client = mqtt.connect(`mqtts://${MQTT_HOST}:${MQTT_PORT}`, {
 
 client.on('connect', () => {
   console.log('Connected to MQTT broker');
-  client.publish(GATEWAY_ID, JSON.stringify(command), (err) => {
+  client.publish(topic, message, (err) => {
     if (err) console.error('Publish failed:', err);
-    else console.log('Published command:', command);
+    else console.log(`Published to ${topic}: ${message}`);
     client.end();
   });
 });

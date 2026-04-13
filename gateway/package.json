@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "ts-node src/server.ts",
-    "fake-client": "ts-node src/fake-client.ts"
+    "dev": "ts-node -r dotenv/config src/server.ts",
+    "fake-client": "ts-node -r dotenv/config src/fake-client.ts"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "mqtt": "^5"
   },
   "devDependencies": {
