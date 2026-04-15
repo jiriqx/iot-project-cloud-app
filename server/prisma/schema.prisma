@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Zone {
+  id                String       @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  timeoutSeconds    Int
+  sensorSensitivity String       // LOW | MEDIUM | HIGH
+  lightingMode      String       // automatic | manual | off
+  nightModeStart    String?      // e.g. "22:00"
+  nightModeEnd      String?      // e.g. "06:00"
+
+  nodes             Node[]
+}
+
+model Node {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  zoneId          String       @db.ObjectId
+  clusterId       String
+  ipAddress       String
+  firmwareVersion String
+  status          String       // active | inactive | service
+
+  zone            Zone         @relation(fields: [zoneId], references: [id])
+  lights          Light[]
+  events          LightEvent[]
+}
+
+model Light {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  nodeId      String       @db.ObjectId
+  status      String       // on | off | offline
+  controlMode String       // auto | manual
+  label       String?
+
+  node        Node         @relation(fields: [nodeId], references: [id])
+  events      LightEvent[]
+}
+
+model LightEvent {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  lightId         String   @db.ObjectId
+  nodeId          String   @db.ObjectId
+  eventType       String   // on | off
+  trigger         String   // auto | manual
+  timestamp       DateTime @default(now())
+  durationSeconds Int?
+
+  light           Light    @relation(fields: [lightId], references: [id])
+  node            Node     @relation(fields: [nodeId], references: [id])
+}
