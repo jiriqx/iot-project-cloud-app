@@ -20,30 +20,29 @@ model Zone {
   nightModeStart    String?      // e.g. "22:00"
   nightModeEnd      String?      // e.g. "06:00"
 
-  lights            Light[]
-  events            LightEvent[]
+  nodes             Node[]
 }
 
 model Node {
   id              String       @id @default(auto()) @map("_id") @db.ObjectId
-  clusterId       String       @db.ObjectId
+  zoneId          String       @db.ObjectId
+  clusterId       String
   ipAddress       String
   firmwareVersion String
   status          String       // active | inactive | service
 
+  zone            Zone         @relation(fields: [zoneId], references: [id])
   lights          Light[]
   events          LightEvent[]
 }
 
 model Light {
   id          String       @id @default(auto()) @map("_id") @db.ObjectId
-  zoneId      String       @db.ObjectId
   nodeId      String       @db.ObjectId
   status      String       // on | off | offline
   controlMode String       // auto | manual
   label       String?
 
-  zone        Zone         @relation(fields: [zoneId], references: [id])
   node        Node         @relation(fields: [nodeId], references: [id])
   events      LightEvent[]
 }
@@ -51,7 +50,6 @@ model Light {
 model LightEvent {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
   lightId         String   @db.ObjectId
-  zoneId          String   @db.ObjectId
   nodeId          String   @db.ObjectId
   eventType       String   // on | off
   trigger         String   // auto | manual
@@ -59,6 +57,5 @@ model LightEvent {
   durationSeconds Int?
 
   light           Light    @relation(fields: [lightId], references: [id])
-  zone            Zone     @relation(fields: [zoneId], references: [id])
   node            Node     @relation(fields: [nodeId], references: [id])
 }
