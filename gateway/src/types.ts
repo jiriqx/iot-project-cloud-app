@@ -1,37 +1,27 @@
 /**
+ * Sent by ESP32 to the gateway to report a state change.
  * METHOD: POST
  * PATH: /api/state
- * Payload
  */
-
-interface WebServerStateRequest {
+export interface WebServerStateRequest {
   value: 'on' | 'off';
   deviceId: string;
 }
 
-interface WebServerCommandRequest {
+/**
+ * Sent by the cloud server to the gateway via MQTT to control a device.
+ */
+export interface WebServerCommandRequest {
   command: 'on' | 'off';
   deviceId: string;
   gatewayId: string;
 }
 
-interface Gateway {
-
-}
-
-interface Esp32 {
-
-}
-
-/*
-Protocol: TCP/IP
-Payload: INT[]
-0 = on
-1 = off
-*/
-
 /**
+ * ESP32 HTTP server endpoint.
  * METHOD: POST
- * PATH: /api/:state
- * state: on | off
+ * PATH: /api/:state  (state = 'on' | 'off')
+ *
+ * TCP/IP fallback protocol:
+ *   Payload: single byte  — 0 = off, 1 = on
  */
