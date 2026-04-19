@@ -1,0 +1,26 @@
+const int pirPin = 26;
+const int relePin = 25;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(pirPin, INPUT);
+  pinMode(relePin, OUTPUT);
+
+  digitalWrite(relePin, LOW);
+}
+
+void loop() {
+
+  int state = digitalRead(pirPin);
+
+  if (state == HIGH) {
+    Serial.println("Motion detected");
+    digitalWrite(relePin, HIGH);   // zapne relé
+  } 
+  else {
+    Serial.println("No motion");
+    digitalWrite(relePin, LOW);    // vypne relé
+  }
+
+  delay(200);
+}
