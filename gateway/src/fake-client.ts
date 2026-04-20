@@ -11,8 +11,8 @@ const MQTT_PASSWORD = process.env.MQTT_PASSWORD!;
 
 const GATEWAY_ID = 'gateway-1';
 const DEVICE_ID = 'light-1';
-const topic = `${GATEWAY_ID}/${DEVICE_ID}/command`;
-const message = 'command=on';
+const topic = `${GATEWAY_ID}/${DEVICE_ID}/state`;
+const message = 'state=on';
 
 const client = mqtt.connect(`mqtts://${MQTT_HOST}:${MQTT_PORT}`, {
   username: MQTT_USERNAME,
