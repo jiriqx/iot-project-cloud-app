@@ -26,9 +26,6 @@ model Zone {
 model Node {
   id              String       @id @default(auto()) @map("_id") @db.ObjectId
   zoneId          String       @db.ObjectId
-  clusterId       String
-  ipAddress       String
-  firmwareVersion String
   status          String       // active | inactive | service
 
   zone            Zone         @relation(fields: [zoneId], references: [id])
