@@ -1,0 +1,19 @@
+{
+  "name": "gateway",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "ts-node -r dotenv/config src/server.ts",
+    "fake-client": "ts-node -r dotenv/config src/fake-client.ts"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "mongoose": "^9.5.0",
+    "mqtt": "^5"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "ts-node": "^10",
+    "typescript": "^5"
+  }
+}
