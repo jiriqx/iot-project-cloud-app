@@ -26,6 +26,7 @@ model Zone {
 model Node {
   id              String       @id @default(auto()) @map("_id") @db.ObjectId
   zoneId          String       @db.ObjectId
+  externalId      String?      @unique // gatewayId/deviceId z MQTT
   status          String       // active | inactive | service
 
   zone            Zone         @relation(fields: [zoneId], references: [id])
