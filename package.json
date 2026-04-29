@@ -1,0 +1,12 @@
+{
+  "name": "iot-project-cloud-app",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "mongoose": "^9.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}
