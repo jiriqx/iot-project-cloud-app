@@ -1,5 +1,5 @@
 import mqtt from 'mqtt';
-import { saveStateChange } from '../../lib/db';
+import { saveStateChange } from './db';
 
 const MQTT_HOST     = process.env.MQTT_HOST!;
 const MQTT_PORT     = Number(process.env.MQTT_PORT ?? 1883);

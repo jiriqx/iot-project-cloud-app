@@ -5,7 +5,7 @@
     "esModuleInterop": true,
     "strict": true,
     "outDir": "dist",
-    "rootDir": ".."
+    "rootDir": "src"
   },
-  "include": ["src", "../lib"]
+  "include": ["src"]
 }
