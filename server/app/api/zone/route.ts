@@ -1,29 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { createZoneSchema } from "@/lib/schemas";
 
 // CREATE ZONE
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      name,
-      timeoutSeconds,
-      sensorSensitivity,
-      lightingMode,
-      nightModeStart,
-      nightModeEnd,
-    } = body;
+    const parsed = createZoneSchema.safeParse(body);
 
-   //valiidace 
-    if (!name || timeoutSeconds === undefined || !sensorSensitivity || !lightingMode) {
+    if (!parsed.success) {
       return NextResponse.json(
-        {
-          error:
-            "Missing required fields: name, timeoutSeconds, sensorSensitivity, lightingMode",
-        },
+        { error: parsed.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { name, timeoutSeconds, sensorSensitivity, lightingMode, nightModeStart, nightModeEnd } =
+      parsed.data;
 
     const zone = await prisma.zone.create({
       data: {

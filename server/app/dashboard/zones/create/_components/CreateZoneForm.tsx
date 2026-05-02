@@ -176,8 +176,11 @@ export function CreateZoneForm() {
               id="nightModeStart"
               name="nightModeStart"
               type="time"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                errors.nightModeStart ? 'border-red-400' : 'border-gray-300'
+              }`}
             />
+            <FieldError message={errors.nightModeStart} />
           </div>
           <div>
             <label
@@ -190,8 +193,11 @@ export function CreateZoneForm() {
               id="nightModeEnd"
               name="nightModeEnd"
               type="time"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                errors.nightModeEnd ? 'border-red-400' : 'border-gray-300'
+              }`}
             />
+            <FieldError message={errors.nightModeEnd} />
           </div>
         </div>
       </fieldset>
