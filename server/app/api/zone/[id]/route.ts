@@ -15,8 +15,19 @@ export async function GET(
     const zone = await prisma.zone.findUnique({
         where: { id },
         include: {
-            nodes: true
-        }
+            nodes: {
+                include: {
+                    lights: {
+                        include: {
+                            events: {
+                                orderBy: { timestamp: 'desc' },
+                                take: 50,
+                            },
+                        },
+                    },
+                },
+            },
+        },
     });
 
     if (!zone) {
