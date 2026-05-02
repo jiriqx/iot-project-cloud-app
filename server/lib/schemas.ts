@@ -2,11 +2,11 @@ import * as z from "zod";
 
 const timeString = z
   .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Time must be in HH:mm format (e.g. 22:00)");
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Čas musí být ve formátu HH:mm (e.g. 22:00)");
 
 export const createZoneSchema = z
   .object({
-    name: z.string().min(1, "Name is required"),
+    name: z.string().min(1, "Jméno zóny je vyžadováno"),
     timeoutSeconds: z.number().int().positive(),
     sensorSensitivity: z.enum(["LOW", "MEDIUM", "HIGH"]),
     lightingMode: z.enum(["automatic", "manual", "off"]),
@@ -20,7 +20,7 @@ export const createZoneSchema = z
     if (hasStart !== hasEnd) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Both nightModeStart and nightModeEnd must be provided together",
+        message: "nightModeStart and nightModeEnd musí být vyplněny spolu",
         path: hasStart ? ["nightModeEnd"] : ["nightModeStart"],
       });
     }
@@ -28,10 +28,20 @@ export const createZoneSchema = z
     if (hasStart && hasEnd && data.nightModeStart === data.nightModeEnd) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "nightModeStart and nightModeEnd cannot be the same time",
+        message: "nightModeStart a nightModeEnd nemohou být stejné",
         path: ["nightModeEnd"],
       });
     }
   });
 
 export type CreateZoneInput = z.infer<typeof createZoneSchema>;
+
+export const registerSchema = z.object({
+  username: z.string().min(3).max(32).regex(/^\S+$/, "Uživatelské jméno nesmí obsahovat mezery"),
+  password: z.string().min(8).regex(/^\S+$/, "Heslo nesmí obsahovat mezery"),
+});
+
+export const loginSchema = z.object({
+  username: z.string().min(1).regex(/^\S+$/, "Uživatelské jméno nesmí obsahovat mezery"),
+  password: z.string().min(1).regex(/^\S+$/, "Heslo nesmí obsahovat mezery"),
+});
