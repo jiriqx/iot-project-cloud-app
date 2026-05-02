@@ -17,6 +17,10 @@ function parsePayload(payload: string): Record<string, string> {
 function getClient(): mqtt.MqttClient {
   if (client) return client;
 
+  if (!MQTT_HOST) {
+    throw new Error('[MQTT] MQTT_HOST is not set — skipping connection');
+  }
+
   client = mqtt.connect(`mqtts://${MQTT_HOST}:${MQTT_PORT}`, {
     username: MQTT_USERNAME,
     password: MQTT_PASSWORD,
@@ -61,5 +65,9 @@ export function publishConfig(gatewayId: string, deviceId: string, payload: Conf
 }
 
 export function startMqttSubscriber(): void {
+  if (!MQTT_HOST) {
+    console.warn('[MQTT] MQTT_HOST not set, skipping MQTT connection');
+    return;
+  }
   getClient();
 }
