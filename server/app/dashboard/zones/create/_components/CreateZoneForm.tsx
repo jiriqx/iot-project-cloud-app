@@ -61,6 +61,7 @@ export function CreateZoneForm() {
 
       const { zone } = await res.json()
       router.push(`/dashboard/zones/${zone.id}`)
+      router.refresh()
     } catch {
       setServerError('Nepodařilo se vytvořit zónu.')
     } finally {
