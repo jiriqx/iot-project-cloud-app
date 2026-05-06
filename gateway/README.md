@@ -27,14 +27,15 @@ Benefit: only the gateway needs to handle DNS resolution and encryption.
 - Create a VM
 - Install git, nvm
 - Clone repository, install dependencies, add .evn
-- `scp infrastructur/gateway.service azureuser@remote_host:/home/azureuser`
-- `ssh azureuser@remote_host -i ~/.ssh/key`
+- `scp infrastructure/gateway.service azureuser@20.86.33.41:/home/azureuser`
+- `ssh-copy-id -i infrastructure/github_actions_key.pub -i ~/.ssh/key azureuser@20.86.33.41`
+- `ssh azureuser@20.86.33.41 -i ~/.ssh/key`
 - `sudo cp gateway.service /etc/systemd/system/`
 - `sudo systemctl daemon-reload`
 - `sudo systemctl enable gateway`
 - `sudo systemctl start gateway`
 
-**Deployment:**
+**Manual deployment:**
 - `ssh azureuser@20.86.33.41 -i ~/.ssh/key`
 - `cd app`
 - `git pull`
