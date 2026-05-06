@@ -1,0 +1,28 @@
+name: Deploy Gateway
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'gateway/**'
+
+jobs:
+  deploy:
+    name: Deploy to Azure VM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.GATEWAY_HOST }}
+          username: ${{ secrets.GATEWAY_USER }}
+          key: ${{ secrets.GATEWAY_SSH_KEY }}
+          script: |
+            cd ~/app
+            git pull
+            cd gateway
+            npm install
+            sudo systemctl restart gateway
+            systemctl status gateway --no-pager

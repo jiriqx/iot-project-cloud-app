@@ -18,3 +18,29 @@ Benefit: this enables communication from the server to nodes without assigning a
 2. The gateway resolves the server IP address, encrypts the message, and forwards it to the server.
 
 Benefit: only the gateway needs to handle DNS resolution and encryption.
+
+## Infrastructure
+- Gateway is running on a VM in Azure
+- Contact `krystof.matejka@unicornuniversity.net` for access
+
+**Buildout:**
+- Create a VM
+- Install git, nvm
+- Clone repository, install dependencies, add .evn
+- `scp infrastructure/gateway.service azureuser@20.86.33.41:/home/azureuser`
+- `ssh-copy-id -i infrastructure/github_actions_key.pub -i ~/.ssh/key azureuser@20.86.33.41`
+- `ssh azureuser@20.86.33.41 -i ~/.ssh/key`
+- `sudo cp gateway.service /etc/systemd/system/`
+- `sudo systemctl daemon-reload`
+- `sudo systemctl enable gateway`
+- `sudo systemctl start gateway`
+
+**Manual deployment:**
+- `ssh azureuser@20.86.33.41 -i ~/.ssh/key`
+- `cd app`
+- `git pull`
+- `sudo systemctl restart gateway`
+
+**Service health:**
+- Status: `systemctl status gateway`
+- Logs: `journalctl -u gateway -f`
