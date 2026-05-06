@@ -1,29 +1,34 @@
-import prisma from '@/lib/prisma'
+'use client'
+
+import { Suspense, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { ClusterSidebar } from './_components/ClusterSidebar'
 import { NodeCard } from './_components/NodeCard'
+import { fetchWithAuth } from '@/lib/fetchWithAuth'
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ zone?: string }>
-}) {
-  const { zone: zoneParam } = await searchParams
-  const selectedZoneId = typeof zoneParam === 'string' ? zoneParam : null
+type ApiZone = {
+  id: string
+  name: string
+  timeoutSeconds: number
+  nodes: Array<{
+    id: string
+    status: string
+    lights: Array<{ status: string }>
+    events: Array<{ timestamp: string; trigger: string }>
+  }>
+}
 
-  const zones = await prisma.zone.findMany({
-    include: {
-      nodes: {
-        include: {
-          lights: true,
-          events: {
-            orderBy: { timestamp: 'desc' },
-            take: 1,
-          },
-        },
-      },
-    },
-    orderBy: { name: 'asc' },
-  })
+function DashboardContent() {
+  const searchParams = useSearchParams()
+  const selectedZoneId = searchParams.get('zone')
+  const [zones, setZones] = useState<ApiZone[]>([])
+
+  useEffect(() => {
+    fetchWithAuth('/api/zone')
+      .then(r => r.json())
+      .then(data => setZones(data.zones ?? []))
+      .catch(() => {})
+  }, [])
 
   const now = Date.now()
 
@@ -46,7 +51,7 @@ export default async function DashboardPage({
 
       let remainingSeconds: number | null = null
       if (latestEvent && node.status === 'active') {
-        const elapsed = (now - latestEvent.timestamp.getTime()) / 1000
+        const elapsed = (now - new Date(latestEvent.timestamp).getTime()) / 1000
         remainingSeconds = Math.max(0, Math.round(zone.timeoutSeconds - elapsed))
       }
 
@@ -55,7 +60,7 @@ export default async function DashboardPage({
         name: `Node ${i + 1} — ${zone.name}`,
         status: node.status,
         lightStatus,
-        lastEventAt: latestEvent?.timestamp.toISOString() ?? null,
+        lastEventAt: latestEvent?.timestamp ?? null,
         lastTrigger: (latestEvent?.trigger as 'auto' | 'manual' | null) ?? null,
         timeoutSeconds: zone.timeoutSeconds,
         remainingSeconds,
@@ -77,9 +82,7 @@ export default async function DashboardPage({
         zones={zones.map((z) => ({ id: z.id, name: z.name }))}
         selectedZoneId={selectedZoneId}
       />
-
       <div className="flex-1 overflow-auto p-6">
-        {/* Info banner */}
         <div className="flex items-start gap-3 rounded-md bg-orange-50 border border-orange-200 px-4 py-3 mb-6 text-sm text-gray-700">
           <span className="text-orange-500 shrink-0 mt-0.5">⚡</span>
           <p>
@@ -90,13 +93,11 @@ export default async function DashboardPage({
           </p>
         </div>
 
-        {/* Heading */}
         <h2 className="text-base font-semibold text-gray-900 mb-4">
           Live stav nodů —{' '}
           <span className="font-normal text-gray-600">{clusterHeading}</span>
         </h2>
 
-        {/* Node grid */}
         {displayNodes.length === 0 ? (
           <div className="py-16 text-center text-sm text-gray-400">
             {selectedZoneId
@@ -112,5 +113,13 @@ export default async function DashboardPage({
         )}
       </div>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense>
+      <DashboardContent />
+    </Suspense>
   )
 }

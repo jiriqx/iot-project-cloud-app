@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 const navItems = [
   { label: 'Přehled', href: '/dashboard' },
@@ -12,6 +12,12 @@ const navItems = [
 
 export function TopNav() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    router.push('/')
+  }
 
   return (
     <header className="border-b border-gray-200 bg-white">
@@ -42,8 +48,13 @@ export function TopNav() {
           })}
         </nav>
 
-        <div className="ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-gray-800 text-xs font-semibold text-white select-none">
-          SM
+        <div className="ml-auto flex items-center gap-3">
+          <button
+            onClick={handleLogout}
+            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            Odhlásit se
+          </button>
         </div>
       </div>
     </header>

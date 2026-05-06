@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { createZoneSchema } from "@/lib/schemas";
+import { getUserId } from "@/lib/auth";
 
 // CREATE ZONE
 export async function POST(request: NextRequest) {
   try {
+    const ownerId = await getUserId(request);
     const body = await request.json();
     const parsed = createZoneSchema.safeParse(body);
 
@@ -20,6 +22,7 @@ export async function POST(request: NextRequest) {
 
     const zone = await prisma.zone.create({
       data: {
+        ownerId,
         name,
         timeoutSeconds,
         sensorSensitivity,
@@ -39,9 +42,21 @@ export async function POST(request: NextRequest) {
 }
 
 // GET ALL ZONES
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const zones = await prisma.zone.findMany();
+    const ownerId = await getUserId(request);
+    const zones = await prisma.zone.findMany({
+      where: { ownerId },
+      include: {
+        nodes: {
+          include: {
+            lights: true,
+            events: { orderBy: { timestamp: "desc" }, take: 1 },
+          },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
 
     return NextResponse.json({ zones }, { status: 200 });
   } catch (error) {
