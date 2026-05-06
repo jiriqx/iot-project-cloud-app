@@ -1,5 +1,8 @@
 import mqtt from 'mqtt';
+import dotenv from 'dotenv';
 import { saveStateChange } from './db';
+
+dotenv.config();
 
 const MQTT_HOST = process.env.MQTT_HOST!;
 const MQTT_PORT = Number(process.env.MQTT_PORT ?? 1883);
@@ -13,6 +16,7 @@ function start() {
   const client = mqtt.connect(`mqtt://${MQTT_HOST}:${MQTT_PORT}`, {
     username: MQTT_USERNAME,
     password: MQTT_PASSWORD,
+    protocol: 'mqtts',
   });
 
   client.on('connect', () => {
@@ -40,6 +44,10 @@ function start() {
   });
 
   client.on('error', (err) => console.error('[MQTT] Error:', err));
+  client.on('close', () => console.log('MQTT connection closed'));
+  client.on('offline', () => console.log('MQTT client offline'));
+  client.on('reconnect', () => console.log('MQTT reconnecting...'));
+
 }
 
 start();
