@@ -1,12 +1,12 @@
 import mqtt from 'mqtt';
 import { saveStateChange } from './db';
 
-const MQTT_HOST     = process.env.MQTT_HOST!;
-const MQTT_PORT     = Number(process.env.MQTT_PORT ?? 1883);
+const MQTT_HOST = process.env.MQTT_HOST!;
+const MQTT_PORT = Number(process.env.MQTT_PORT ?? 1883);
 const MQTT_USERNAME = process.env.MQTT_USERNAME!;
 const MQTT_PASSWORD = process.env.MQTT_PASSWORD!;
 
-// Topic: iot/v1/{gatewayId}/{deviceId}/state  payload: "state=on" | "state=off"
+// Topic: iot/v1/{gatewayId}/{deviceMac}/state  payload: "state=on" | "state=off"
 const TOPIC = 'iot/v1/+/+/state';
 
 function start() {
@@ -24,15 +24,15 @@ function start() {
   });
 
   client.on('message', async (topic: string, raw: Buffer) => {
-    const parts = topic.split('/'); // ['iot', 'v1', gatewayId, deviceId, 'state']
-    const [, , gatewayId, deviceId] = parts;
+    const parts = topic.split('/'); // ['iot', 'v1', gatewayId, deviceMac, 'state']
+    const [, , gatewayId, deviceMac] = parts;
     const value = raw.toString().split('=')[1]; // "state=on" -> "on"
     const state = value === 'on';
 
-    console.log(`[MQTT] ${gatewayId}/${deviceId} -> state=${value}`);
+    console.log(`[MQTT] ${gatewayId}/${deviceMac} -> state=${value}`);
 
     try {
-      await saveStateChange(gatewayId, deviceId, state);
+      await saveStateChange(gatewayId, deviceMac, state);
       console.log('[DB] State change saved');
     } catch (err) {
       console.error('[DB] Failed to save state change:', err);

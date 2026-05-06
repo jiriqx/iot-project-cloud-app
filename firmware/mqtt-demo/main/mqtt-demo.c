@@ -7,6 +7,7 @@
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_mac.h"
 #include "nvs_flash.h"
 #include "esp_netif.h"
 #include "mqtt_client.h"
@@ -21,9 +22,36 @@
 #define MQTT_BROKER_URI     "BROKER_URI" // for example "mqtts://bed6ad2e4c5945b898cf35ff4f9a19c2.s1.eu.hivemq.cloud:8883"
 #define MQTT_USERNAME       "USERNAME"
 #define MQTT_PASSWORD       "PASSWORD"
-#define MQTT_TOPIC          "#"   /* subscribe to all topics */
+#define MQTT_GATEWAY_ID     "GATEWAY_ID"
 
 static const char *TAG = "mqtt-demo";
+
+/* MAC address string buffer: "AA:BB:CC:DD:EE:FF" + null */
+static char device_mac[18];
+
+/* Topic buffers for subscribe/publish */
+static char topic_subscribe[64];   /* iot/v1/{gatewayId}/{mac}/command */
+static char topic_state[64];       /* iot/v1/{gatewayId}/{mac}/state  */
+
+static void get_device_mac(void)
+{
+    uint8_t mac[6];
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);
+    snprintf(device_mac, sizeof(device_mac),
+             "%02X:%02X:%02X:%02X:%02X:%02X",
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    ESP_LOGI(TAG, "Device MAC: %s", device_mac);
+}
+
+static void build_topics(void)
+{
+    snprintf(topic_subscribe, sizeof(topic_subscribe),
+             "iot/v1/%s/%s/command", MQTT_GATEWAY_ID, device_mac);
+    snprintf(topic_state, sizeof(topic_state),
+             "iot/v1/%s/%s/state", MQTT_GATEWAY_ID, device_mac);
+    ESP_LOGI(TAG, "Subscribe topic: %s", topic_subscribe);
+    ESP_LOGI(TAG, "Publish topic:   %s", topic_state);
+}
 
 static EventGroupHandle_t s_wifi_event_group;
 #define WIFI_CONNECTED_BIT  BIT0
@@ -107,8 +135,8 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
     switch ((esp_mqtt_event_id_t)event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT connected to broker");
-            esp_mqtt_client_subscribe(client, MQTT_TOPIC, 1);
-            ESP_LOGI(TAG, "Subscribed to topic: \"%s\"", MQTT_TOPIC);
+            esp_mqtt_client_subscribe(client, topic_subscribe, 1);
+            ESP_LOGI(TAG, "Subscribed to topic: \"%s\"", topic_subscribe);
             break;
 
         case MQTT_EVENT_DISCONNECTED:
@@ -179,6 +207,9 @@ void app_main(void)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+
+    get_device_mac();
+    build_topics();
 
     wifi_init_sta();
     mqtt_start();

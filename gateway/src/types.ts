@@ -5,7 +5,7 @@
  */
 export interface WebServerStateRequest {
   value: 'on' | 'off';
-  deviceId: string;
+  deviceMac: string;
 }
 
 /**
@@ -13,7 +13,7 @@ export interface WebServerStateRequest {
  */
 export interface WebServerCommandRequest {
   command: 'on' | 'off';
-  deviceId: string;
+  deviceMac: string;
   gatewayId: string;
 }
 
