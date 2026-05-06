@@ -26,7 +26,7 @@ Benefit: only the gateway needs to handle DNS resolution and encryption.
 **Buildout:**
 - Create a VM
 - Install git, nvm
-- Clone repository, install dependencies
+- Clone repository, install dependencies, add .evn
 - `scp infrastructur/gateway.service azureuser@remote_host:/home/azureuser`
 - `ssh azureuser@remote_host -i ~/.ssh/key`
 - `sudo cp gateway.service /etc/systemd/system/`
