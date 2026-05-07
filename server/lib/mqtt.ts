@@ -28,16 +28,17 @@ function getClient(): mqtt.MqttClient {
 
   client.on('connect', () => {
     console.log('[MQTT] Connected to broker');
-    client!.subscribe('+/+/state', (err) => {
+    client!.subscribe('iot/v1/+/+/state', (err) => {
       if (err) console.error('[MQTT] Subscribe error:', err);
-      else console.log('[MQTT] Subscribed to +/+/state');
+      else console.log('[MQTT] Subscribed to iot/v1/+/+/state');
     });
   });
 
   client.on('message', (topic, raw) => {
-    const [gatewayId, deviceId] = topic.split('/');
+    const parts = topic.split('/'); // ['iot', 'v1', gatewayId, deviceMac, 'state']
+    const [, , gatewayId, deviceMac] = parts;
     const payload = parsePayload(raw.toString());
-    console.log(`[MQTT] state from gateway=${gatewayId} device=${deviceId}:`, payload);
+    console.log(`[MQTT] state from gateway=${gatewayId} deviceMac=${deviceMac}:`, payload);
     // TODO: save to database
   });
 
@@ -46,8 +47,8 @@ function getClient(): mqtt.MqttClient {
   return client;
 }
 
-export function publishCommand(gatewayId: string, deviceId: string, payload: CommandPayload): void {
-  const topic = `${gatewayId}/${deviceId}/command`;
+export function publishCommand(gatewayId: string, deviceMac: string, payload: CommandPayload): void {
+  const topic = `iot/v1/${gatewayId}/${deviceMac}/command`;
   const message = `command=${payload.command}`;
   getClient().publish(topic, message, (err) => {
     if (err) console.error('[MQTT] Publish error:', err);
@@ -55,8 +56,8 @@ export function publishCommand(gatewayId: string, deviceId: string, payload: Com
   });
 }
 
-export function publishConfig(gatewayId: string, deviceId: string, payload: ConfigPayload): void {
-  const topic = `${gatewayId}/${deviceId}/config`;
+export function publishConfig(gatewayId: string, deviceMac: string, payload: ConfigPayload): void {
+  const topic = `iot/v1/${gatewayId}/${deviceMac}/config`;
   const message = `timeoutMs=${payload.timeoutMs}`;
   getClient().publish(topic, message, (err) => {
     if (err) console.error('[MQTT] Publish error:', err);

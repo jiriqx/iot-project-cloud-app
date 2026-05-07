@@ -2,8 +2,8 @@ import mongoose from 'mongoose';
 
 const stateChangeSchema = new mongoose.Schema({
   gatewayId: { type: String, required: true },
-  deviceId:  { type: String, required: true },
-  state:     { type: Boolean, required: true },
+  deviceMac: { type: String, required: true },
+  state: { type: Boolean, required: true },
   timestamp: { type: Date, default: Date.now },
 });
 
@@ -23,9 +23,9 @@ export async function connectDb(): Promise<void> {
 
 export async function saveStateChange(
   gatewayId: string,
-  deviceId: string,
+  deviceMac: string,
   state: boolean,
 ): Promise<void> {
   await connectDb();
-  await StateChange.create({ gatewayId, deviceId, state });
+  await StateChange.create({ gatewayId, deviceMac, state });
 }
