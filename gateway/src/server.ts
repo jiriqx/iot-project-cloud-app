@@ -1,8 +1,5 @@
 import mqtt from 'mqtt';
-import dotenv from 'dotenv';
 import { saveStateChange } from './db';
-
-dotenv.config();
 
 const MQTT_HOST = process.env.MQTT_HOST!;
 const MQTT_PORT = Number(process.env.MQTT_PORT ?? 1883);

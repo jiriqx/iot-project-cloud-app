@@ -13,16 +13,16 @@
 #include "mqtt_client.h"
 #include "esp_crt_bundle.h"
 
-/* ── WiFi credentials ────────────────────────────────────────────────── */
-#define WIFI_SSID           "WIFI_SSID"
-#define WIFI_PASS           "WIFI_PASS"
+/* ── WiFi credentials (set via idf.py menuconfig) ────────────────────── */
+#define WIFI_SSID           CONFIG_WIFI_SSID
+#define WIFI_PASS           CONFIG_WIFI_PASSWORD
 #define WIFI_MAXIMUM_RETRY  5
 
-/* ── MQTT broker ─────────────────────────────────────────────────────── */
-#define MQTT_BROKER_URI     "BROKER_URI" // for example "mqtts://bed6ad2e4c5945b898cf35ff4f9a19c2.s1.eu.hivemq.cloud:8883"
-#define MQTT_USERNAME       "USERNAME"
-#define MQTT_PASSWORD       "PASSWORD"
-#define MQTT_GATEWAY_ID     "GATEWAY_ID"
+/* ── MQTT broker (set via idf.py menuconfig) ─────────────────────────── */
+#define MQTT_BROKER_URI     CONFIG_MQTT_BROKER_URI
+#define MQTT_USERNAME       CONFIG_MQTT_USERNAME
+#define MQTT_PASSWORD       CONFIG_MQTT_PASSWORD
+#define MQTT_GATEWAY_ID     CONFIG_MQTT_GATEWAY_ID
 
 static const char *TAG = "mqtt-demo";
 
@@ -135,6 +135,12 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
     switch ((esp_mqtt_event_id_t)event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT connected to broker");
+
+            /* Report initial state as off */
+            esp_mqtt_client_publish(client, topic_state, "state=off", 0, 1, 0);
+            ESP_LOGI(TAG, "Published to %s: state=off", topic_state);
+
+            /* Subscribe to command topic */
             esp_mqtt_client_subscribe(client, topic_subscribe, 1);
             ESP_LOGI(TAG, "Subscribed to topic: \"%s\"", topic_subscribe);
             break;
