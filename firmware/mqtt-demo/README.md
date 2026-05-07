@@ -17,6 +17,9 @@
    idf.py --version
    ```
 
+**Configure project:**
+- `idf.py reconfigure`
+- `idf.py menuconfig` (go to Project Configuration)
 
 **Install dependencies:**
 - `idf.py add-dependency espressif/mqtt`
