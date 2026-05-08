@@ -13,7 +13,7 @@ export default function SignIn() {
           <form
             action={async () => {
               "use server"
-              await signIn("github", { redirectTo: "/dashboard" })
+              await signIn("google", { redirectTo: "/dashboard" })
             }}
           >
             <button className="gsi-material-button" type="submit">
