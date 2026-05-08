@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getUserId } from "@/lib/auth";
+import { auth } from "@/auth";
 
 export async function GET(
     request: NextRequest,
@@ -13,7 +13,9 @@ export async function GET(
         return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
 
-    const ownerId = await getUserId(request);
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const ownerId = session.user.id;
 
     const zone = await prisma.zone.findUnique({
         where: { id },

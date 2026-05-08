@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { createZoneSchema } from "@/lib/schemas";
-import { getUserId } from "@/lib/auth";
+import { auth } from "@/auth";
 
 // CREATE ZONE
 export async function POST(request: NextRequest) {
   try {
-    const ownerId = await getUserId(request);
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const ownerId = session.user.id;
     const body = await request.json();
     const parsed = createZoneSchema.safeParse(body);
 
@@ -44,7 +46,9 @@ export async function POST(request: NextRequest) {
 // GET ALL ZONES
 export async function GET(request: NextRequest) {
   try {
-    const ownerId = await getUserId(request);
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const ownerId = session.user.id;
     const zones = await prisma.zone.findMany({
       where: { ownerId },
       include: {
