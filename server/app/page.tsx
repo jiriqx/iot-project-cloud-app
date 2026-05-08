@@ -1,75 +1,6 @@
-'use client'
+import { signIn } from "@/auth"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-
-type Mode = 'login' | 'register'
-
-export default function AuthPage() {
-  const router = useRouter()
-  const [mode, setMode] = useState<Mode>('login')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-
-  const switchMode = (next: Mode) => {
-    setMode(next)
-    setError(null)
-    setSuccess(null)
-    setPassword('')
-    setConfirmPassword('')
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setSuccess(null)
-
-    if (mode === 'register' && password !== confirmPassword) {
-      setError('Hesla musí být stejná')
-      return
-    }
-
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/${mode}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        const err = data.error
-        if (err && typeof err === 'object') {
-          const fields = Object.values(err.fieldErrors ?? {}).flat()
-          setError(fields[0] ?? err.formErrors?.[0] ?? 'Došlo k chybě')
-        } else {
-          setError(err ?? 'Došlo k chybě')
-        }
-        return
-      }
-
-      if (mode === 'login') {
-        localStorage.setItem('token', data.token)
-        router.push('/dashboard')
-      } else {
-        setSuccess('Účet vytvořen — Můžete se nyní přihlásit')
-        setPassword('')
-        setConfirmPassword('')
-        setMode('login')
-      }
-    } catch {
-      setError('Chyba sítě, zkuste to znovu později')
-    } finally {
-      setLoading(false)
-    }
-  }
-
+export default function SignIn() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm">
@@ -78,96 +9,32 @@ export default function AuthPage() {
           <span className="font-bold text-gray-900 tracking-wide">BIOT DL</span>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-
-          <div className="flex border-b border-gray-200">
-            {(['login', 'register'] as Mode[]).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => switchMode(m)}
-                className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                  mode === m
-                    ? 'text-gray-900 border-b-2 border-blue-600 bg-white'
-                    : 'text-gray-500 hover:text-gray-700 bg-gray-50'
-                }`}
-              >
-                {m === 'login' ? 'Přihlášení' : 'Registrace'}
-              </button>
-            ))}
-          </div>
-
-          <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
-            {error && (
-              <div className="rounded-md border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-gray-700">
-                {error}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 flex flex-col items-center gap-4">
+          <form
+            action={async () => {
+              "use server"
+              await signIn("github", { redirectTo: "/dashboard" })
+            }}
+          >
+            <button className="gsi-material-button" type="submit">
+              <div className="gsi-material-button-state"></div>
+              <div className="gsi-material-button-content-wrapper">
+                <div className="gsi-material-button-icon">
+                  <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style={{ display: "block" }}>
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                    <path fill="none" d="M0 0h48v48H0z"></path>
+                  </svg>
+                </div>
+                <span className="gsi-material-button-contents">Příhlásit se pomocí účtu Google</span>
+                <span style={{ display: "none" }}>Příhlásit se pomocí účtu Google</span>
               </div>
-            )}
-            {success && (
-              <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                {success}
-              </div>
-            )}
-
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="username" className="text-xs font-medium text-gray-700">
-                Uživatelské jméno
-              </label>
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                autoComplete="username"
-                placeholder="Zadejte Uživatelské jméno"
-                className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="password" className="text-xs font-medium text-gray-700">
-                Heslo
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                placeholder={mode === 'register' ? 'Min. 8 znaků' : 'Zadejte heslo'}
-                className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-
-            {mode === 'register' && (
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="confirmPassword" className="text-xs font-medium text-gray-700">
-                  Heslo znovu
-                </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  autoComplete="new-password"
-                  placeholder="Heslo znovu"
-                  className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
-              {loading ? '...' : mode === 'login' ? 'Přihlásit se' : 'Vytvořit účet'}
             </button>
           </form>
         </div>
+
       </div>
     </div>
   )
