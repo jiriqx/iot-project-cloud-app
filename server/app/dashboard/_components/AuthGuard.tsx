@@ -1,24 +1,8 @@
-'use client'
+import { auth } from '@/auth'
+import { redirect } from 'next/navigation'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { fetchWithAuth } from '@/lib/fetchWithAuth'
-
-export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
-  const [verified, setVerified] = useState(false)
-
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) { router.replace('/'); return }
-
-    fetchWithAuth('/api/auth/verify').then(res => {
-      if (!res.ok) { localStorage.removeItem('token'); router.replace('/') }
-      else setVerified(true)
-    }).catch(() => router.replace('/'))
-  }, [router])
-
-  if (!verified) return null
-
+export async function AuthGuard({ children }: { children: React.ReactNode }) {
+  const session = await auth()
+  if (!session) redirect('/')
   return <>{children}</>
 }

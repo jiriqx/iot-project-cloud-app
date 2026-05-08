@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { notFound } from 'next/navigation'
-import { fetchWithAuth } from '@/lib/fetchWithAuth'
 import { LightGrid } from './_components/LightGrid'
 import { EventLog, type ZoneEvent } from './_components/EventLog'
 import { SwitchToAutoButton } from './_components/SwitchToAutoButton'
@@ -71,7 +70,7 @@ export default function ZoneDetailPage() {
       setIsNotFound(true)
       return
     }
-    fetchWithAuth(`/api/zone/${id}`)
+    fetch(`/api/zone/${id}`)
       .then(r => {
         if (r.status === 404) { setIsNotFound(true); return null }
         return r.json()
