@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 
 const MAC_REGEX = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/;
 
 export async function POST(request: NextRequest) {
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const body = await request.json();
     const { zoneId, mac } = body;
 
-    //verifies that zoneId is received and is a valid mongodb objectId
     if (!zoneId || !zoneId.match(/^[a-f\d]{24}$/i)) {
         return NextResponse.json({ error: "zoneId is either missing or in not valid objectId" }, { status: 400 });
     }
@@ -18,7 +21,6 @@ export async function POST(request: NextRequest) {
 
     const zone = await prisma.zone.findUnique({ where: { id: zoneId } })
 
-    //making sure that zone exists
     if (!zone) {
         return NextResponse.json({ error: "Zone not found" }, { status: 404 });
     }
@@ -42,6 +44,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const body = await request.json();
     const { nodeId, mac } = body;
 
