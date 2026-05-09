@@ -41,3 +41,31 @@ export async function GET(
 
     return NextResponse.json(zone);
 }
+//p
+export async function PATCH(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    const { id } = await params as { id: string };
+
+    if (!id.match(/^[a-f\d]{24}$/i)) {
+        return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    }
+
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const ownerId = session.user.id;
+
+    const zone = await prisma.zone.findUnique({ where: { id } });
+
+    if (!zone || zone.ownerId !== ownerId) {
+        return NextResponse.json({ error: "Zone not found" }, { status: 404 });
+    }
+
+    const updated = await prisma.zone.update({
+        where: { id },
+        data: { lightingMode: "automatic" }
+    });
+
+    return NextResponse.json(updated);
+}
