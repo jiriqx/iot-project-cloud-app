@@ -10,7 +10,11 @@ export function SwitchToAutoButton({ zoneId }: { zoneId: string }) {
   async function handleClick() {
     setLoading(true)
     try {
-      await fetch(`/api/zone/${zoneId}`, { method: 'PATCH' })
+      await fetch(`/api/zone/${zoneId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lightingMode: 'automatic' }),
+})
       router.refresh()
     } finally {
       setLoading(false)
