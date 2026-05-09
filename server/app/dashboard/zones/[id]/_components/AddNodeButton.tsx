@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { fetchWithAuth } from '@/lib/fetchWithAuth'
 
 const MAC_REGEX = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/
 
@@ -28,7 +27,7 @@ export function AddNodeButton({ zoneId }: { zoneId: string }) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchWithAuth('/api/node', {
+      const res = await fetch('/api/node', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ zoneId, mac }),
