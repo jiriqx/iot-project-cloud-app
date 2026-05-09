@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 
 const navItems = [
   { label: 'Přehled', href: '/dashboard' },
@@ -12,12 +13,8 @@ const navItems = [
 
 export function TopNav() {
   const pathname = usePathname()
-  const router = useRouter()
 
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    router.push('/')
-  }
+  const handleLogout = () => signOut({ callbackUrl: '/' })
 
   return (
     <header className="border-b border-gray-200 bg-white">

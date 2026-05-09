@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ClusterSidebar } from './_components/ClusterSidebar'
 import { NodeCard } from './_components/NodeCard'
-import { fetchWithAuth } from '@/lib/fetchWithAuth'
 
 type ApiZone = {
   id: string
@@ -24,7 +23,7 @@ function DashboardContent() {
   const [zones, setZones] = useState<ApiZone[]>([])
 
   useEffect(() => {
-    fetchWithAuth('/api/zone')
+    fetch('/api/zone')
       .then(r => r.json())
       .then(data => setZones(data.zones ?? []))
       .catch(() => {})

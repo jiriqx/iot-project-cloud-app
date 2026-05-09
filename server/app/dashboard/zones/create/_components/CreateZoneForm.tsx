@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createZoneSchema } from '@/lib/schemas'
-import { fetchWithAuth } from '@/lib/fetchWithAuth'
 
 type FieldErrors = Partial<Record<string, string>>
 
@@ -48,7 +47,7 @@ export function CreateZoneForm() {
 
     setIsSubmitting(true)
     try {
-      const res = await fetchWithAuth('/api/zone', {
+      const res = await fetch('/api/zone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(result.data),
