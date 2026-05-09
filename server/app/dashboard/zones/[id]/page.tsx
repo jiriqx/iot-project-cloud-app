@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import { LightGrid } from './_components/LightGrid'
 import { EventLog, type ZoneEvent } from './_components/EventLog'
 import { SwitchToAutoButton } from './_components/SwitchToAutoButton'
+import { AddNodeButton } from './_components/AddNodeButton'
 
 const modeLabel: Record<string, string> = {
   automatic: 'automatický režim',
@@ -132,7 +133,10 @@ export default function ZoneDetailPage() {
             </span>
           </div>
         </div>
-        <SwitchToAutoButton zoneId={zone.id} />
+        <div className="flex items-center gap-2">
+          <AddNodeButton zoneId={zone.id} />
+          <SwitchToAutoButton zoneId={zone.id} />
+        </div>
       </div>
 
       <div className="flex items-center gap-3 mb-6 text-xs text-gray-400">
