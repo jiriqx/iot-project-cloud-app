@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { useCallback, Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ClusterSidebar } from './_components/ClusterSidebar'
 import { NodeCard } from './_components/NodeCard'
@@ -9,9 +9,11 @@ type ApiZone = {
   id: string
   name: string
   timeoutSeconds: number
+  lightingMode: string
   nodes: Array<{
     id: string
     mac: string | null
+    externalId: string | null
     status: string
     lights: Array<{ status: string }>
     events: Array<{ timestamp: string; trigger: string }>
@@ -25,12 +27,16 @@ function DashboardContent() {
   const selectedZoneId = searchParams.get('zone')
   const [zones, setZones] = useState<ApiZone[]>([])
 
-  useEffect(() => {
+  const fetchZones = useCallback(() => {
     fetch('/api/zone')
       .then(r => r.json())
       .then(data => setZones(data.zones ?? []))
       .catch(() => { })
   }, [])
+
+  useEffect(() => {
+    fetchZones()
+  }, [fetchZones])
 
   const now = Date.now()
 
@@ -70,9 +76,11 @@ function DashboardContent() {
       return {
         id: node.id,
         mac: node.mac ?? null,
+        externalId: node.externalId ?? null,
         name: `Node ${i + 1} — ${zone.name}`,
         status: effectiveStatus,
         lightStatus,
+        lightingMode: zone.lightingMode,
         lastEventAt: lastStateChange?.timestamp ?? latestEvent?.timestamp ?? null,
         lastTrigger: (latestEvent?.trigger as 'auto' | 'manual' | null) ?? null,
         timeoutSeconds: zone.timeoutSeconds,
@@ -120,7 +128,7 @@ function DashboardContent() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {displayNodes.map((node) => (
-              <NodeCard key={node.id} {...node} />
+              <NodeCard key={node.id} {...node} onRefresh={fetchZones} />
             ))}
           </div>
         )}

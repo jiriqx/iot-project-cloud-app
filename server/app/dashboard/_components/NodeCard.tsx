@@ -1,12 +1,16 @@
 type NodeCardProps = {
+  id: string
   name: string
   mac: string | null
+  externalId: string | null
   status: string
   lightStatus: 'on' | 'off' | 'offline' | 'unknown'
+  lightingMode: string
   lastEventAt: string | null
   lastTrigger: 'auto' | 'manual' | null
   timeoutSeconds: number
   remainingSeconds: number | null
+  onRefresh?: () => void
 }
 
 const nodeStatusConfig: Record<string, { label: string; badge: string }> = {
@@ -52,14 +56,18 @@ function Row({
 }
 
 export function NodeCard({
+  id,
   name,
   mac,
+  externalId,
   status,
   lightStatus,
+  lightingMode,
   lastEventAt,
   lastTrigger,
   timeoutSeconds,
   remainingSeconds,
+  onRefresh,
 }: NodeCardProps) {
   const isOffline = status !== 'active'
   const nodeCfg = nodeStatusConfig[status] ?? { label: status, badge: 'bg-gray-100 text-gray-500' }
@@ -69,6 +77,17 @@ export function NodeCard({
     remainingSeconds !== null ? (remainingSeconds / timeoutSeconds) * 100 : 0
 
   const showTimeout = !isOffline && lastEventAt !== null
+
+  const isManual = lightingMode === 'manual'
+
+  async function handleCommand(command: 'on' | 'off') {
+    await fetch('/api/command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gatewayId: 'gateway-1', nodeId: id, command }),
+    })
+    onRefresh?.()
+  }
 
   return (
     <div
@@ -110,8 +129,8 @@ export function NodeCard({
           {lastTrigger ? (
             <span
               className={`text-xs font-medium px-2 py-0.5 rounded-full ${lastTrigger === 'auto'
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-yellow-100 text-yellow-700'
+                ? 'bg-blue-50 text-blue-600'
+                : 'bg-yellow-100 text-yellow-700'
                 }`}
             >
               {lastTrigger === 'auto' ? 'auto (PIR)' : 'manuálně'}
@@ -141,6 +160,26 @@ export function NodeCard({
               />
             )}
           </div>
+        </div>
+      )}
+
+      {/* Manual on/off control */}
+      {isManual && !isOffline && (
+        <div className="mt-3 flex gap-2">
+          <button
+            onClick={() => handleCommand('on')}
+            disabled={lightStatus === 'on'}
+            className="flex-1 rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Zapnout
+          </button>
+          <button
+            onClick={() => handleCommand('off')}
+            disabled={lightStatus === 'off'}
+            className="flex-1 rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Vypnout
+          </button>
         </div>
       )}
     </div>
