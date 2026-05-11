@@ -1,5 +1,5 @@
 import mqtt from 'mqtt';
-import { saveStateChange } from './db';
+import { saveStateChange, savePing } from './db';
 
 const MQTT_HOST = process.env.MQTT_HOST!;
 const MQTT_PORT = Number(process.env.MQTT_PORT ?? 1883);
@@ -7,7 +7,9 @@ const MQTT_USERNAME = process.env.MQTT_USERNAME!;
 const MQTT_PASSWORD = process.env.MQTT_PASSWORD!;
 
 // Topic: iot/v1/{gatewayId}/{deviceMac}/state  payload: "state=on" | "state=off"
-const TOPIC = 'iot/v1/+/+/state';
+const TOPIC_STATE = 'iot/v1/+/+/state';
+// Topic: iot/v1/{gatewayId}/{deviceMac}/ping   payload: "ping"
+const TOPIC_PING = 'iot/v1/+/+/ping';
 
 function start() {
   const client = mqtt.connect(`mqtt://${MQTT_HOST}:${MQTT_PORT}`, {
@@ -18,15 +20,32 @@ function start() {
 
   client.on('connect', () => {
     console.log('[MQTT] Connected to broker');
-    client.subscribe(TOPIC, (err) => {
-      if (err) console.error('[MQTT] Subscribe error:', err);
-      else console.log(`[MQTT] Subscribed to ${TOPIC}`);
+    client.subscribe(TOPIC_STATE, (err) => {
+      if (err) console.error('[MQTT] Subscribe error (state):', err);
+      else console.log(`[MQTT] Subscribed to ${TOPIC_STATE}`);
+    });
+    client.subscribe(TOPIC_PING, (err) => {
+      if (err) console.error('[MQTT] Subscribe error (ping):', err);
+      else console.log(`[MQTT] Subscribed to ${TOPIC_PING}`);
     });
   });
 
   client.on('message', async (topic: string, raw: Buffer) => {
-    const parts = topic.split('/'); // ['iot', 'v1', gatewayId, deviceMac, 'state']
-    const [, , gatewayId, deviceMac] = parts;
+    const parts = topic.split('/'); // ['iot', 'v1', gatewayId, deviceMac, type]
+    const [, , gatewayId, deviceMac, msgType] = parts;
+
+    if (msgType === 'ping') {
+      console.log(`[MQTT] Ping from ${deviceMac}`);
+      try {
+        await savePing(deviceMac);
+        console.log('[DB] Ping saved');
+      } catch (err) {
+        console.error('[DB] Failed to save ping:', err);
+      }
+      return;
+    }
+
+    // state message
     const value = raw.toString().split('=')[1]; // "state=on" -> "on"
     const state = value === 'on';
 

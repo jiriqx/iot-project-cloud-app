@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
       .filter((m): m is string => !!m);
 
     const stateMap = new Map<string, { state: boolean; timestamp: string }>();
+    const pingMap = new Map<string, string>();
 
     if (allMacs.length > 0) {
       const result = (await prisma.$runCommandRaw({
@@ -99,6 +100,26 @@ export async function GET(request: NextRequest) {
           timestamp,
         });
       }
+
+      // Query pings collection for lastPing per MAC
+      const pingResult = (await prisma.$runCommandRaw({
+        aggregate: "pings",
+        pipeline: [
+          { $match: { deviceMac: { $in: allMacs } } },
+        ],
+        cursor: {},
+      })) as { cursor?: { firstBatch?: Array<Record<string, unknown>> } };
+
+      for (const doc of pingResult.cursor?.firstBatch ?? []) {
+        const ts = (doc.lastPing as Record<string, unknown>)?.$date;
+        const timestamp =
+          typeof ts === "string"
+            ? ts
+            : typeof (ts as Record<string, string>)?.$numberLong === "string"
+              ? new Date(parseInt((ts as Record<string, string>).$numberLong)).toISOString()
+              : new Date(doc.lastPing as string).toISOString();
+        pingMap.set(doc.deviceMac as string, timestamp);
+      }
     }
 
     const enrichedZones = zones.map((zone) => ({
@@ -106,6 +127,7 @@ export async function GET(request: NextRequest) {
       nodes: zone.nodes.map((node) => ({
         ...node,
         lastStateChange: node.mac ? stateMap.get(node.mac) ?? null : null,
+        lastPing: node.mac ? pingMap.get(node.mac) ?? null : null,
       })),
     }));
 

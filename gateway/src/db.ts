@@ -11,6 +11,15 @@ export const StateChange =
   mongoose.models.StateChange ??
   mongoose.model('StateChange', stateChangeSchema);
 
+const pingSchema = new mongoose.Schema({
+  deviceMac: { type: String, required: true, unique: true },
+  lastPing: { type: Date, default: Date.now },
+});
+
+export const Ping =
+  mongoose.models.Ping ??
+  mongoose.model('Ping', pingSchema);
+
 let connected = false;
 
 export async function connectDb(): Promise<void> {
@@ -28,4 +37,13 @@ export async function saveStateChange(
 ): Promise<void> {
   await connectDb();
   await StateChange.create({ gatewayId, deviceMac, state });
+}
+
+export async function savePing(deviceMac: string): Promise<void> {
+  await connectDb();
+  await Ping.findOneAndUpdate(
+    { deviceMac },
+    { lastPing: new Date() },
+    { upsert: true },
+  );
 }

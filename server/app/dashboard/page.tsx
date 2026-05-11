@@ -15,6 +15,7 @@ type ApiZone = {
     lights: Array<{ status: string }>
     events: Array<{ timestamp: string; trigger: string }>
     lastStateChange: { state: boolean; timestamp: string } | null
+    lastPing: string | null
   }>
 }
 
@@ -41,12 +42,11 @@ function DashboardContent() {
       const latestEvent = node.events[0] ?? null
       const lastStateChange = node.lastStateChange
 
-      const ONE_HOUR_MS = 60 * 60 * 1000
-      const lastReportedAt = lastStateChange?.timestamp ?? latestEvent?.timestamp
-      const recentlyReported = lastReportedAt
-        ? now - new Date(lastReportedAt).getTime() < ONE_HOUR_MS
+      const ONE_MINUTE_MS = 60 * 1000
+      const pingRecent = node.lastPing
+        ? now - new Date(node.lastPing).getTime() < ONE_MINUTE_MS
         : false
-      const effectiveStatus = recentlyReported ? 'active' : node.status
+      const effectiveStatus = pingRecent ? 'active' : 'inactive'
 
       const lightStatus: 'on' | 'off' | 'offline' | 'unknown' =
         node.lights.length === 0 && !lastStateChange

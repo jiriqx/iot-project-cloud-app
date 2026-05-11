@@ -32,6 +32,10 @@ static char device_mac[18];
 /* Topic buffers for subscribe/publish */
 static char topic_subscribe[64];   /* iot/v1/{gatewayId}/{mac}/command */
 static char topic_state[64];       /* iot/v1/{gatewayId}/{mac}/state  */
+static char topic_ping[64];        /* iot/v1/{gatewayId}/{mac}/ping   */
+
+/* MQTT client handle for ping task */
+static esp_mqtt_client_handle_t mqtt_client = NULL;
 
 static void get_device_mac(void)
 {
@@ -49,8 +53,11 @@ static void build_topics(void)
              "iot/v1/%s/%s/command", MQTT_GATEWAY_ID, device_mac);
     snprintf(topic_state, sizeof(topic_state),
              "iot/v1/%s/%s/state", MQTT_GATEWAY_ID, device_mac);
+    snprintf(topic_ping, sizeof(topic_ping),
+             "iot/v1/%s/%s/ping", MQTT_GATEWAY_ID, device_mac);
     ESP_LOGI(TAG, "Subscribe topic: %s", topic_subscribe);
     ESP_LOGI(TAG, "Publish topic:   %s", topic_state);
+    ESP_LOGI(TAG, "Ping topic:      %s", topic_ping);
 }
 
 static EventGroupHandle_t s_wifi_event_group;
@@ -126,6 +133,18 @@ static void wifi_init_sta(void)
 
 /* ── MQTT ──────────────────────────────────────────────────────────────*/
 
+static void ping_task(void *arg)
+{
+    (void)arg;
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(60000)); /* 60 seconds */
+        if (mqtt_client) {
+            esp_mqtt_client_publish(mqtt_client, topic_ping, "ping", 0, 0, 0);
+            ESP_LOGI(TAG, "Ping sent to %s", topic_ping);
+        }
+    }
+}
+
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
                                 int32_t event_id, void *event_data)
 {
@@ -139,6 +158,10 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
             /* Report initial state as on */
             esp_mqtt_client_publish(client, topic_state, "state=on", 0, 1, 0);
             ESP_LOGI(TAG, "Published to %s: state=on", topic_state);
+
+            /* Send first ping immediately */
+            esp_mqtt_client_publish(client, topic_ping, "ping", 0, 0, 0);
+            ESP_LOGI(TAG, "Initial ping sent to %s", topic_ping);
 
             /* Subscribe to command topic */
             esp_mqtt_client_subscribe(client, topic_subscribe, 1);
@@ -197,9 +220,13 @@ static void mqtt_start(void)
     };
 
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
+    mqtt_client = client;
     ESP_ERROR_CHECK(esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID,
                                                    mqtt_event_handler, NULL));
     ESP_ERROR_CHECK(esp_mqtt_client_start(client));
+
+    /* Start periodic ping task */
+    xTaskCreate(ping_task, "ping_task", 2048, NULL, 5, NULL);
 }
 
 /* ── Entry point ───────────────────────────────────────────────────────*/
