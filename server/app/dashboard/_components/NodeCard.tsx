@@ -1,5 +1,6 @@
 type NodeCardProps = {
   name: string
+  mac: string | null
   status: string
   lightStatus: 'on' | 'off' | 'offline' | 'unknown'
   lastEventAt: string | null
@@ -52,6 +53,7 @@ function Row({
 
 export function NodeCard({
   name,
+  mac,
   status,
   lightStatus,
   lastEventAt,
@@ -70,15 +72,17 @@ export function NodeCard({
 
   return (
     <div
-      className={`rounded-lg border bg-white p-4 ${
-        isOffline ? 'border-red-200' : 'border-gray-200'
-      }`}
+      className={`rounded-lg border bg-white p-4 ${isOffline ? 'border-red-200' : 'border-gray-200'
+        }`}
     >
       {/* Card header */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-semibold text-gray-900 truncate pr-2">
-          {name}
-        </span>
+        <div className="truncate pr-2">
+          <span className="text-sm font-semibold text-gray-900">{name}</span>
+          {mac && (
+            <span className="block text-xs text-gray-400 font-mono">{mac}</span>
+          )}
+        </div>
         <span
           className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${nodeCfg.badge}`}
         >
@@ -105,11 +109,10 @@ export function NodeCard({
         <Row label="Trigger">
           {lastTrigger ? (
             <span
-              className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                lastTrigger === 'auto'
+              className={`text-xs font-medium px-2 py-0.5 rounded-full ${lastTrigger === 'auto'
                   ? 'bg-blue-50 text-blue-600'
                   : 'bg-yellow-100 text-yellow-700'
-              }`}
+                }`}
             >
               {lastTrigger === 'auto' ? 'auto (PIR)' : 'manuálně'}
             </span>

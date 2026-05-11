@@ -11,6 +11,7 @@ type ApiZone = {
   timeoutSeconds: number
   nodes: Array<{
     id: string
+    mac: string | null
     status: string
     lights: Array<{ status: string }>
     events: Array<{ timestamp: string; trigger: string }>
@@ -42,7 +43,7 @@ function DashboardContent() {
       const latestEvent = node.events[0] ?? null
       const lastStateChange = node.lastStateChange
 
-      const ONE_MINUTE_MS = 60 * 1000
+      const ONE_MINUTE_MS = 5 * 60 * 1000
       const pingRecent = node.lastPing
         ? now - new Date(node.lastPing).getTime() < ONE_MINUTE_MS
         : false
@@ -68,6 +69,7 @@ function DashboardContent() {
 
       return {
         id: node.id,
+        mac: node.mac ?? null,
         name: `Node ${i + 1} — ${zone.name}`,
         status: effectiveStatus,
         lightStatus,
