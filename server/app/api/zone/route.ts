@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       .flatMap((z) => z.nodes.map((n) => n.mac))
       .filter((m): m is string => !!m);
 
-    const stateMap = new Map<string, { state: boolean; timestamp: string }>();
+    const stateMap = new Map<string, { state: boolean; timestamp: string; trigger: string }>();
     const pingMap = new Map<string, string>();
 
     if (allMacs.length > 0) {
@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
               _id: "$deviceMac",
               state: { $first: "$state" },
               timestamp: { $first: "$timestamp" },
+              trigger: { $first: "$trigger" },
             },
           },
         ],
@@ -98,6 +99,7 @@ export async function GET(request: NextRequest) {
         stateMap.set(doc._id as string, {
           state: doc.state as boolean,
           timestamp,
+          trigger: (doc.trigger as string) ?? "auto",
         });
       }
 

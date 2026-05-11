@@ -17,7 +17,7 @@ type ApiZone = {
     status: string
     lights: Array<{ status: string }>
     events: Array<{ timestamp: string; trigger: string }>
-    lastStateChange: { state: boolean; timestamp: string } | null
+    lastStateChange: { state: boolean; timestamp: string; trigger: string } | null
     lastPing: string | null
   }>
 }
@@ -82,7 +82,7 @@ function DashboardContent() {
         lightStatus,
         lightingMode: zone.lightingMode,
         lastEventAt: lastStateChange?.timestamp ?? latestEvent?.timestamp ?? null,
-        lastTrigger: (latestEvent?.trigger as 'auto' | 'manual' | null) ?? null,
+        lastTrigger: (lastStateChange?.trigger as 'auto' | 'manual' | null) ?? (latestEvent?.trigger as 'auto' | 'manual' | null) ?? null,
         timeoutSeconds: zone.timeoutSeconds,
         remainingSeconds,
       }
