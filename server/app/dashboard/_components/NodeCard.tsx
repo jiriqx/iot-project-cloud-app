@@ -148,17 +148,6 @@ export function NodeCard({
             <span className="text-xs text-gray-400">
               Timeout ({timeoutSeconds} s)
             </span>
-            <span className="text-xs text-gray-400">
-              {remainingSeconds! > 0 ? `${remainingSeconds} s zbývá` : 'vypršel'}
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-            {pct > 0 && (
-              <div
-                className={`h-full rounded-full ${progressBarColor(pct)}`}
-                style={{ width: `${pct}%` }}
-              />
-            )}
           </div>
         </div>
       )}
