@@ -136,9 +136,9 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT connected to broker");
 
-            /* Report initial state as off */
-            esp_mqtt_client_publish(client, topic_state, "state=off", 0, 1, 0);
-            ESP_LOGI(TAG, "Published to %s: state=off", topic_state);
+            /* Report initial state as on */
+            esp_mqtt_client_publish(client, topic_state, "state=on", 0, 1, 0);
+            ESP_LOGI(TAG, "Published to %s: state=on", topic_state);
 
             /* Subscribe to command topic */
             esp_mqtt_client_subscribe(client, topic_subscribe, 1);

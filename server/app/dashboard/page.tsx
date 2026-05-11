@@ -14,6 +14,7 @@ type ApiZone = {
     status: string
     lights: Array<{ status: string }>
     events: Array<{ timestamp: string; trigger: string }>
+    lastStateChange: { state: boolean; timestamp: string } | null
   }>
 }
 
@@ -26,7 +27,7 @@ function DashboardContent() {
     fetch('/api/zone')
       .then(r => r.json())
       .then(data => setZones(data.zones ?? []))
-      .catch(() => {})
+      .catch(() => { })
   }, [])
 
   const now = Date.now()
@@ -38,28 +39,39 @@ function DashboardContent() {
   const displayNodes = filteredZones.flatMap((zone) =>
     zone.nodes.map((node, i) => {
       const latestEvent = node.events[0] ?? null
+      const lastStateChange = node.lastStateChange
+
+      const ONE_HOUR_MS = 60 * 60 * 1000
+      const lastReportedAt = lastStateChange?.timestamp ?? latestEvent?.timestamp
+      const recentlyReported = lastReportedAt
+        ? now - new Date(lastReportedAt).getTime() < ONE_HOUR_MS
+        : false
+      const effectiveStatus = recentlyReported ? 'active' : node.status
 
       const lightStatus: 'on' | 'off' | 'offline' | 'unknown' =
-        node.lights.length === 0
+        node.lights.length === 0 && !lastStateChange
           ? 'unknown'
-          : node.lights.some((l) => l.status === 'on')
-          ? 'on'
-          : node.lights.every((l) => l.status === 'offline')
-          ? 'offline'
-          : 'off'
+          : lastStateChange
+            ? lastStateChange.state ? 'on' : 'off'
+            : node.lights.some((l) => l.status === 'on')
+              ? 'on'
+              : node.lights.every((l) => l.status === 'offline')
+                ? 'offline'
+                : 'off'
 
       let remainingSeconds: number | null = null
-      if (latestEvent && node.status === 'active') {
-        const elapsed = (now - new Date(latestEvent.timestamp).getTime()) / 1000
+      const latestTimestamp = lastStateChange?.timestamp ?? latestEvent?.timestamp
+      if (latestTimestamp && effectiveStatus === 'active') {
+        const elapsed = (now - new Date(latestTimestamp).getTime()) / 1000
         remainingSeconds = Math.max(0, Math.round(zone.timeoutSeconds - elapsed))
       }
 
       return {
         id: node.id,
         name: `Node ${i + 1} — ${zone.name}`,
-        status: node.status,
+        status: effectiveStatus,
         lightStatus,
-        lastEventAt: latestEvent?.timestamp ?? null,
+        lastEventAt: lastStateChange?.timestamp ?? latestEvent?.timestamp ?? null,
         lastTrigger: (latestEvent?.trigger as 'auto' | 'manual' | null) ?? null,
         timeoutSeconds: zone.timeoutSeconds,
         remainingSeconds,
@@ -69,10 +81,10 @@ function DashboardContent() {
 
   const clusterHeading = selectedZoneId
     ? (() => {
-        const z = zones.find((z) => z.id === selectedZoneId)
-        const i = zones.findIndex((z) => z.id === selectedZoneId)
-        return z ? `Cluster ${i + 1} — ${z.name}` : 'Neznámý cluster'
-      })()
+      const z = zones.find((z) => z.id === selectedZoneId)
+      const i = zones.findIndex((z) => z.id === selectedZoneId)
+      return z ? `Cluster ${i + 1} — ${z.name}` : 'Neznámý cluster'
+    })()
     : 'Všechny nody'
 
   return (

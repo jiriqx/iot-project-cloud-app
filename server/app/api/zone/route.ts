@@ -62,7 +62,54 @@ export async function GET(request: NextRequest) {
       orderBy: { name: "asc" },
     });
 
-    return NextResponse.json({ zones }, { status: 200 });
+    // Collect all node MACs and query the gateway's statechanges collection
+    const allMacs = zones
+      .flatMap((z) => z.nodes.map((n) => n.mac))
+      .filter((m): m is string => !!m);
+
+    const stateMap = new Map<string, { state: boolean; timestamp: string }>();
+
+    if (allMacs.length > 0) {
+      const result = (await prisma.$runCommandRaw({
+        aggregate: "statechanges",
+        pipeline: [
+          { $match: { deviceMac: { $in: allMacs } } },
+          { $sort: { timestamp: -1 } },
+          {
+            $group: {
+              _id: "$deviceMac",
+              state: { $first: "$state" },
+              timestamp: { $first: "$timestamp" },
+            },
+          },
+        ],
+        cursor: {},
+      })) as { cursor?: { firstBatch?: Array<Record<string, unknown>> } };
+
+      for (const doc of result.cursor?.firstBatch ?? []) {
+        const ts = (doc.timestamp as Record<string, unknown>)?.$date;
+        const timestamp =
+          typeof ts === "string"
+            ? ts
+            : typeof (ts as Record<string, string>)?.$numberLong === "string"
+              ? new Date(parseInt((ts as Record<string, string>).$numberLong)).toISOString()
+              : new Date(doc.timestamp as string).toISOString();
+        stateMap.set(doc._id as string, {
+          state: doc.state as boolean,
+          timestamp,
+        });
+      }
+    }
+
+    const enrichedZones = zones.map((zone) => ({
+      ...zone,
+      nodes: zone.nodes.map((node) => ({
+        ...node,
+        lastStateChange: node.mac ? stateMap.get(node.mac) ?? null : null,
+      })),
+    }));
+
+    return NextResponse.json({ zones: enrichedZones }, { status: 200 });
   } catch (error) {
     console.error("GET /api/zone error:", error);
     return NextResponse.json(
