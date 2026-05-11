@@ -45,14 +45,21 @@ function start() {
       return;
     }
 
-    // state message
-    const value = raw.toString().split('=')[1]; // "state=on" -> "on"
-    const state = value === 'on';
+    // state message — payload: "state=on" or "state=on,trigger=manual"
+    const payload = raw.toString();
+    const params = Object.fromEntries(
+      payload.split(',').map((p) => {
+        const [k, v] = p.split('=');
+        return [k, v];
+      })
+    );
+    const state = params.state === 'on';
+    const trigger = params.trigger ?? 'auto';
 
-    console.log(`[MQTT] ${gatewayId}/${deviceMac} -> state=${value}`);
+    console.log(`[MQTT] ${gatewayId}/${deviceMac} -> state=${params.state} trigger=${trigger}`);
 
     try {
-      await saveStateChange(gatewayId, deviceMac, state);
+      await saveStateChange(gatewayId, deviceMac, state, trigger);
       console.log('[DB] State change saved');
     } catch (err) {
       console.error('[DB] Failed to save state change:', err);

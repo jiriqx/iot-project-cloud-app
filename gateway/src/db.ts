@@ -4,6 +4,7 @@ const stateChangeSchema = new mongoose.Schema({
   gatewayId: { type: String, required: true },
   deviceMac: { type: String, required: true },
   state: { type: Boolean, required: true },
+  trigger: { type: String, default: 'auto' },
   timestamp: { type: Date, default: Date.now },
 });
 
@@ -34,9 +35,10 @@ export async function saveStateChange(
   gatewayId: string,
   deviceMac: string,
   state: boolean,
+  trigger: string = 'auto',
 ): Promise<void> {
   await connectDb();
-  await StateChange.create({ gatewayId, deviceMac, state });
+  await StateChange.create({ gatewayId, deviceMac, state, trigger });
 }
 
 export async function savePing(deviceMac: string): Promise<void> {

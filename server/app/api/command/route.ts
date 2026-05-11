@@ -40,6 +40,7 @@ export async function POST(request: Request) {
           gatewayId,
           deviceMac,
           state: body.command === 'on',
+          trigger: 'manual',
           timestamp: { $date: new Date().toISOString() },
         },
       ],

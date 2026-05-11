@@ -155,9 +155,9 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT connected to broker");
 
-            /* Report initial state as on */
-            esp_mqtt_client_publish(client, topic_state, "state=on", 0, 1, 0);
-            ESP_LOGI(TAG, "Published to %s: state=on", topic_state);
+            /* Report initial state as on (auto trigger — boot) */
+            esp_mqtt_client_publish(client, topic_state, "state=on,trigger=auto", 0, 1, 0);
+            ESP_LOGI(TAG, "Published to %s: state=on,trigger=auto", topic_state);
 
             /* Send first ping immediately */
             esp_mqtt_client_publish(client, topic_ping, "ping", 0, 0, 0);
@@ -181,6 +181,21 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
             ESP_LOGI(TAG, "--- Message received ---");
             ESP_LOGI(TAG, "Topic : %.*s", event->topic_len, event->topic);
             ESP_LOGI(TAG, "Data  : %.*s", event->data_len,  event->data);
+
+            /* Handle command: "on" or "off" — report state back as manual */
+            if (event->data_len > 0 && event->data_len < 16) {
+                char cmd[16];
+                int len = event->data_len < (int)sizeof(cmd) - 1 ? event->data_len : (int)sizeof(cmd) - 1;
+                memcpy(cmd, event->data, len);
+                cmd[len] = '\0';
+
+                if (strcmp(cmd, "on") == 0 || strcmp(cmd, "off") == 0) {
+                    char payload[48];
+                    snprintf(payload, sizeof(payload), "state=%s,trigger=manual", cmd);
+                    esp_mqtt_client_publish(client, topic_state, payload, 0, 1, 0);
+                    ESP_LOGI(TAG, "Command '%s' received, published: %s", cmd, payload);
+                }
+            }
             break;
 
         case MQTT_EVENT_ERROR:
