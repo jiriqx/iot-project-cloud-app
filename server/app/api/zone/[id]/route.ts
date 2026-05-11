@@ -57,14 +57,23 @@ export async function PATCH(
     const ownerId = session.user.id;
 
     const zone = await prisma.zone.findUnique({ where: { id } });
-
     if (!zone || zone.ownerId !== ownerId) {
         return NextResponse.json({ error: "Zone not found" }, { status: 404 });
     }
 
+    const body = await request.json();
+    const { name, timeoutSeconds, sensorSensitivity, lightingMode, nightModeStart, nightModeEnd } = body;
+
     const updated = await prisma.zone.update({
         where: { id },
-        data: { lightingMode: "automatic" }
+        data: {
+            ...(name && { name }),
+            ...(timeoutSeconds && { timeoutSeconds }),
+            ...(sensorSensitivity && { sensorSensitivity }),
+            ...(lightingMode && { lightingMode }),
+            ...(nightModeStart !== undefined && { nightModeStart }),
+            ...(nightModeEnd !== undefined && { nightModeEnd }),
+        }
     });
 
     return NextResponse.json(updated);
