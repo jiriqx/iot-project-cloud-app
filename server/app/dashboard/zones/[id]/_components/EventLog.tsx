@@ -1,6 +1,6 @@
 export type ZoneEvent = {
   id: string
-  lightLabel: string
+  nodeLabel: string
   eventType: 'on' | 'off'
   trigger: 'auto' | 'manual'
   timestamp: string
@@ -40,7 +40,7 @@ export function EventLog({ events }: { events: ZoneEvent[] }) {
               {formatTime(e.timestamp)}
             </span>
             <span className="text-gray-800 flex-1">
-              {e.lightLabel} —{' '}
+              {e.nodeLabel} —{' '}
               {e.eventType === 'on' ? 'zapnuto' : 'zhasnuto'}
             </span>
             <span

@@ -34,12 +34,6 @@ function relativeTime(iso: string): string {
   return `před ${Math.round(minutes / 60)} h`
 }
 
-function progressBarColor(pct: number): string {
-  if (pct > 60) return 'bg-green-500'
-  if (pct > 25) return 'bg-orange-400'
-  return 'bg-red-400'
-}
-
 function Row({
   label,
   children,
@@ -59,22 +53,17 @@ export function NodeCard({
   id,
   name,
   mac,
-  externalId,
   status,
   lightStatus,
   lightingMode,
   lastEventAt,
   lastTrigger,
   timeoutSeconds,
-  remainingSeconds,
   onRefresh,
 }: NodeCardProps) {
   const isOffline = status !== 'active'
   const nodeCfg = nodeStatusConfig[status] ?? { label: status, badge: 'bg-gray-100 text-gray-500' }
   const lightCfg = lightStatusConfig[lightStatus]
-
-  const pct =
-    remainingSeconds !== null ? (remainingSeconds / timeoutSeconds) * 100 : 0
 
   const showTimeout = !isOffline && lastEventAt !== null
 
@@ -111,7 +100,7 @@ export function NodeCard({
 
       {/* Rows */}
       <div className="divide-y divide-gray-100">
-        <Row label="Světlo">
+        <Row label="Stav">
           <span
             className={`text-xs font-medium px-2 py-0.5 rounded-full ${lightCfg.badge}`}
           >
