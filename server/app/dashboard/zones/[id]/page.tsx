@@ -106,11 +106,11 @@ export default function ZoneDetailPage() {
         <div>
           <h1 className="text-xl font-semibold text-gray-900">{zone.name}</h1>
           <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
-            <span>{zone.nodes.length} nody</span>
+            <span>{zone.nodes.length} {zone.nodes.length === 1 ? 'node' : zone.nodes.length >= 2 && zone.nodes.length <= 4 ? 'nody' : 'nodů'}</span>
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${modeBadge[zone.lightingMode] ?? 'bg-gray-100 text-gray-600'}`}>
-              {modeLabel[zone.lightingMode] ?? zone.lightingMode}
+                            {modeLabel[zone.lightingMode] ?? zone.lightingMode}
             </span>
-          </div>
+</div>
         </div>
         <div className="flex items-center gap-2">
           <AddNodeButton zoneId={zone.id} />
