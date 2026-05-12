@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { useCallback, Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ClusterSidebar } from './_components/ClusterSidebar'
 import { NodeCard } from './_components/NodeCard'
@@ -9,11 +9,16 @@ type ApiZone = {
   id: string
   name: string
   timeoutSeconds: number
+  lightingMode: string
   nodes: Array<{
     id: string
+    mac: string | null
+    externalId: string | null
     status: string
     lights: Array<{ status: string }>
     events: Array<{ timestamp: string; trigger: string }>
+    lastStateChange: { state: boolean; timestamp: string; trigger: string } | null
+    lastPing: string | null
   }>
 }
 
@@ -22,12 +27,16 @@ function DashboardContent() {
   const selectedZoneId = searchParams.get('zone')
   const [zones, setZones] = useState<ApiZone[]>([])
 
-  useEffect(() => {
+  const fetchZones = useCallback(() => {
     fetch('/api/zone')
       .then(r => r.json())
       .then(data => setZones(data.zones ?? []))
-      .catch(() => {})
+      .catch(() => { })
   }, [])
+
+  useEffect(() => {
+    fetchZones()
+  }, [fetchZones])
 
   const now = Date.now()
 
@@ -38,29 +47,42 @@ function DashboardContent() {
   const displayNodes = filteredZones.flatMap((zone) =>
     zone.nodes.map((node, i) => {
       const latestEvent = node.events[0] ?? null
+      const lastStateChange = node.lastStateChange
+
+      const ONE_MINUTE_MS = 5 * 60 * 1000
+      const pingRecent = node.lastPing
+        ? now - new Date(node.lastPing).getTime() < ONE_MINUTE_MS
+        : false
+      const effectiveStatus = pingRecent ? 'active' : 'inactive'
 
       const lightStatus: 'on' | 'off' | 'offline' | 'unknown' =
-        node.lights.length === 0
+        node.lights.length === 0 && !lastStateChange
           ? 'unknown'
-          : node.lights.some((l) => l.status === 'on')
-          ? 'on'
-          : node.lights.every((l) => l.status === 'offline')
-          ? 'offline'
-          : 'off'
+          : lastStateChange
+            ? lastStateChange.state ? 'on' : 'off'
+            : node.lights.some((l) => l.status === 'on')
+              ? 'on'
+              : node.lights.every((l) => l.status === 'offline')
+                ? 'offline'
+                : 'off'
 
       let remainingSeconds: number | null = null
-      if (latestEvent && node.status === 'active') {
-        const elapsed = (now - new Date(latestEvent.timestamp).getTime()) / 1000
+      const latestTimestamp = lastStateChange?.timestamp ?? latestEvent?.timestamp
+      if (latestTimestamp && effectiveStatus === 'active') {
+        const elapsed = (now - new Date(latestTimestamp).getTime()) / 1000
         remainingSeconds = Math.max(0, Math.round(zone.timeoutSeconds - elapsed))
       }
 
       return {
         id: node.id,
+        mac: node.mac ?? null,
+        externalId: node.externalId ?? null,
         name: `Node ${i + 1} — ${zone.name}`,
-        status: node.status,
+        status: effectiveStatus,
         lightStatus,
-        lastEventAt: latestEvent?.timestamp ?? null,
-        lastTrigger: (latestEvent?.trigger as 'auto' | 'manual' | null) ?? null,
+        lightingMode: zone.lightingMode,
+        lastEventAt: lastStateChange?.timestamp ?? latestEvent?.timestamp ?? null,
+        lastTrigger: (lastStateChange?.trigger as 'auto' | 'manual' | null) ?? (latestEvent?.trigger as 'auto' | 'manual' | null) ?? null,
         timeoutSeconds: zone.timeoutSeconds,
         remainingSeconds,
       }
@@ -69,10 +91,10 @@ function DashboardContent() {
 
   const clusterHeading = selectedZoneId
     ? (() => {
-        const z = zones.find((z) => z.id === selectedZoneId)
-        const i = zones.findIndex((z) => z.id === selectedZoneId)
-        return z ? `Cluster ${i + 1} — ${z.name}` : 'Neznámý cluster'
-      })()
+      const z = zones.find((z) => z.id === selectedZoneId)
+      const i = zones.findIndex((z) => z.id === selectedZoneId)
+      return z ? `Cluster ${i + 1} — ${z.name}` : 'Neznámý cluster'
+    })()
     : 'Všechny nody'
 
   return (
@@ -106,7 +128,7 @@ function DashboardContent() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {displayNodes.map((node) => (
-              <NodeCard key={node.id} {...node} />
+              <NodeCard key={node.id} {...node} onRefresh={fetchZones} />
             ))}
           </div>
         )}
