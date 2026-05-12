@@ -26,26 +26,6 @@ const sensitivityLabel: Record<string, string> = {
   HIGH: 'Vysoká',
 }
 
-function nodeMetaLabel(count: number) {
-  if (count === 0) return null
-  if (count <= 2) return Array.from({ length: count }, (_, i) => `Node ${i + 1}`).join(', ')
-  return `${count} nody`
-}
-
-type Light = {
-  id: string
-  label: string | null
-  status: string
-  nodeId: string
-  events: Array<{
-    id: string
-    eventType: string
-    trigger: string
-    timestamp: string
-    durationSeconds: number | null
-  }>
-}
-
 type Zone = {
   id: string
   name: string
@@ -57,7 +37,17 @@ type Zone = {
   nodes: Array<{
     id: string
     externalId: string | null
-    lights: Light[]
+    lights: Array<{
+      id: string
+      status: string
+      events: Array<{
+        id: string
+        eventType: string
+        trigger: string
+        timestamp: string
+        durationSeconds: number | null
+      }>
+    }>
   }>
 }
 
@@ -83,37 +73,32 @@ export default function ZoneDetailPage() {
   if (isNotFound) notFound()
   if (!zone) return null
 
-  const lights = zone.nodes.flatMap((n) =>
-    n.lights.map((l) => ({
-      id: l.id,
-      label: l.label ?? 'Světlo',
-      status: l.status as 'on' | 'off' | 'offline',
-      nodeId: l.nodeId,
-    }))
-  )
-
-  const nodes = zone.nodes.map((n) => ({
-    id: n.id,
-    externalId: n.externalId ?? '',
-  }))
+  const nodesForGrid = zone.nodes.map((n) => {
+    const externalId = n.externalId ?? ''
+    const deviceId = externalId.split('/')[1] ?? externalId
+    const label = `Node ${deviceId}`
+    const status = (n.lights[0]?.status as 'on' | 'off' | 'offline') ?? 'offline'
+    return { id: n.id, externalId, label, status }
+  })
 
   const events: ZoneEvent[] = zone.nodes
-    .flatMap((n) =>
-      n.lights.flatMap((l) =>
+    .flatMap((n) => {
+      const externalId = n.externalId ?? ''
+      const deviceId = externalId.split('/')[1] ?? externalId
+      const nodeLabel = `Node ${deviceId}`
+      return n.lights.flatMap((l) =>
         l.events.map((e) => ({
           id: e.id,
-          lightLabel: l.label ?? 'Světlo',
+          nodeLabel,
           eventType: e.eventType as 'on' | 'off',
           trigger: e.trigger as 'auto' | 'manual',
           timestamp: e.timestamp,
           durationSeconds: e.durationSeconds,
         }))
       )
-    )
+    })
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     .slice(0, 20)
-
-  const nodeLabel = nodeMetaLabel(zone.nodes.length)
 
   return (
     <div className="p-6 max-w-4xl">
@@ -121,13 +106,7 @@ export default function ZoneDetailPage() {
         <div>
           <h1 className="text-xl font-semibold text-gray-900">{zone.name}</h1>
           <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
-            <span>{lights.length} světel</span>
-            {nodeLabel && (
-              <>
-                <span>·</span>
-                <span>{nodeLabel}</span>
-              </>
-            )}
+            <span>{zone.nodes.length} nody</span>
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${modeBadge[zone.lightingMode] ?? 'bg-gray-100 text-gray-600'}`}>
               {modeLabel[zone.lightingMode] ?? zone.lightingMode}
             </span>
@@ -151,14 +130,7 @@ export default function ZoneDetailPage() {
         )}
       </div>
 
-      {zone.nodes.length === 0 ? (
-        <div className="py-16 text-center">
-          <p className="text-sm font-medium text-gray-500">Zóna nemá žádné nody</p>
-          <p className="mt-1 text-xs text-gray-400">Přidejte node a připojte k němu světla.</p>
-        </div>
-      ) : (
-        <LightGrid lights={lights} nodes={nodes} />
-      )}
+      <LightGrid nodes={nodesForGrid} />
 
       {events.length > 0 && <EventLog events={events} />}
     </div>

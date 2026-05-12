@@ -2,16 +2,11 @@
 
 import { useState, useTransition } from 'react'
 
-type Light = {
-  id: string
-  label: string
-  status: 'on' | 'off' | 'offline'
-  nodeId: string
-}
-
 type Node = {
   id: string
   externalId: string
+  label: string
+  status: 'on' | 'off' | 'offline'
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -51,17 +46,9 @@ async function sendCommand(externalId: string, command: 'on' | 'off') {
   })
 }
 
-export function LightGrid({
-  lights,
-  nodes,
-}: {
-  lights: Light[]
-  nodes: Node[]
-}) {
+export function LightGrid({ nodes }: { nodes: Node[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [isPending, startTransition] = useTransition()
-
-  const nodeById = new Map(nodes.map((n) => [n.id, n]))
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -72,59 +59,44 @@ export function LightGrid({
     })
   }
 
-  function handleCommand(lightIds: string[], command: 'on' | 'off') {
-    const nodeIds = [
-      ...new Set(
-        lightIds
-          .map((id) => lights.find((l) => l.id === id)?.nodeId)
-          .filter(Boolean) as string[]
-      ),
-    ]
+  function handleCommand(nodeIds: string[], command: 'on' | 'off') {
     startTransition(async () => {
       await Promise.all(
         nodeIds
-          .map((nid) => nodeById.get(nid))
+          .map((id) => nodes.find((n) => n.id === id))
           .filter((n): n is Node => !!n?.externalId)
           .map((n) => sendCommand(n.externalId, command))
       )
     })
   }
 
-  const allIds = lights.map((l) => l.id)
+  const allIds = nodes.map((n) => n.id)
   const selectedIds = [...selected]
-  const selectedLabels = lights
-    .filter((l) => selected.has(l.id))
-    .map((l) => l.label)
+  const selectedLabels = nodes.filter((n) => selected.has(n.id)).map((n) => n.label)
 
-  if (lights.length === 0) {
+  if (nodes.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-sm font-medium text-gray-500">
-          Node nemá žádná světla
-        </p>
-        <p className="mt-1 text-xs text-gray-400">
-          Přidejte světla do nodu v konfiguraci.
-        </p>
+        <p className="text-sm font-medium text-gray-500">Zóna nemá žádné nody</p>
+        <p className="mt-1 text-xs text-gray-400">Přidejte node tlačítkem výše.</p>
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      <h2 className="text-sm font-medium text-gray-700">
-        Světla — vyberte pro ovládání
-      </h2>
+      <h2 className="text-sm font-medium text-gray-700">Nody — vyberte pro ovládání</h2>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-        {lights.map((light) => {
-          const isSelected = selected.has(light.id)
-          const isOffline = light.status === 'offline'
-          const cfg = statusConfig[light.status] ?? statusConfig.off
+        {nodes.map((node) => {
+          const isSelected = selected.has(node.id)
+          const isOffline = node.status === 'offline'
+          const cfg = statusConfig[node.status] ?? statusConfig.off
 
           return (
             <button
-              key={light.id}
-              onClick={() => !isOffline && toggle(light.id)}
+              key={node.id}
+              onClick={() => !isOffline && toggle(node.id)}
               disabled={isOffline}
               className={[
                 'flex flex-col items-center gap-3 px-4 py-5 rounded-lg border-2 transition-all text-center',
@@ -135,9 +107,9 @@ export function LightGrid({
                   : 'border-gray-200 bg-white hover:border-gray-300 cursor-pointer',
               ].join(' ')}
             >
-              <BulbIcon status={light.status} />
+              <BulbIcon status={node.status} />
               <span className="text-sm font-medium text-gray-800 leading-tight">
-                {light.label}
+                {node.label}
               </span>
               <span
                 className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg.className}`}
@@ -151,8 +123,8 @@ export function LightGrid({
 
       <p className="text-xs text-gray-400">
         {selected.size > 0
-          ? `Vybráno: ${selectedLabels.join(', ')} · Klikněte na světlo pro výběr`
-          : 'Klikněte na světlo pro výběr'}
+          ? `Vybráno: ${selectedLabels.join(', ')} · Klikněte na node pro výběr`
+          : 'Klikněte na node pro výběr'}
       </p>
 
       <div className="flex flex-wrap gap-2 pt-1">
