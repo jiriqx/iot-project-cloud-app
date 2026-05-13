@@ -8,7 +8,6 @@ const navItems = [
   { label: 'Přehled', href: '/dashboard' },
   { label: 'Správa zón', href: '/dashboard/zones' },
   { label: 'Statistiky', href: '/dashboard/statistics' },
-  { label: 'Konfigurace', href: '/dashboard/configuration' },
 ]
 
 export function TopNav() {
