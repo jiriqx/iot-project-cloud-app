@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { SkeletonLine, SkeletonCard } from '@/app/_components/Skeleton'
 
 type Zone = {
   id: string
@@ -13,21 +14,42 @@ type Zone = {
   nightModeEnd: string | null
 }
 
+type ListState =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'done'; zones: Zone[] }
+
+function ZoneListSkeleton() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <SkeletonCard key={i}>
+          <div className="flex items-start justify-between">
+            <div className="space-y-2 flex-1 mr-4">
+              <SkeletonLine className="w-40" />
+              <SkeletonLine className="w-72 h-3" />
+            </div>
+            <SkeletonLine className="w-14 h-3 shrink-0 mt-1" />
+          </div>
+        </SkeletonCard>
+      ))}
+    </div>
+  )
+}
+
 export default function ZonesPage() {
-  const [zones, setZones] = useState<Zone[]>([])
-  const [loading, setLoading] = useState(true)
+  const [listState, setListState] = useState<ListState>({ status: 'loading' })
+  const [fetchKey, setFetchKey] = useState(0)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<Partial<Zone>>({})
   const [saving, setSaving] = useState(false)
 
-  async function fetchZones() {
-    const res = await fetch('/api/zone')
-    const data = await res.json()
-    setZones(data.zones ?? [])
-    setLoading(false)
-  }
-
-  useEffect(() => { fetchZones() }, [])
+  useEffect(() => {
+    fetch('/api/zone')
+      .then(r => r.json())
+      .then(data => setListState({ status: 'done', zones: data.zones ?? [] }))
+      .catch(() => setListState({ status: 'error', message: 'Nepodařilo se načíst zóny. Zkontrolujte připojení.' }))
+  }, [fetchKey])
 
   function startEdit(zone: Zone) {
     setEditingId(zone.id)
@@ -60,11 +82,14 @@ export default function ZonesPage() {
         }),
       })
       setEditingId(null)
-      await fetchZones()
+      setListState({ status: 'loading' })
+      setFetchKey(k => k + 1)
     } finally {
       setSaving(false)
     }
   }
+
+  const zones = listState.status === 'done' ? listState.zones : []
 
   return (
     <div className="flex-1 overflow-auto p-6">
@@ -79,11 +104,25 @@ export default function ZonesPage() {
           </Link>
         </div>
 
-        {loading ? (
-          <p className="text-sm text-gray-400">Načítám…</p>
-        ) : zones.length === 0 ? (
+        {listState.status === 'error' && (
+          <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+            <span>{listState.message}</span>
+            <button
+              onClick={() => { setListState({ status: 'loading' }); setFetchKey(k => k + 1) }}
+              className="ml-4 px-3 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded transition-colors"
+            >
+              Zkusit znovu
+            </button>
+          </div>
+        )}
+
+        {listState.status === 'loading' && <ZoneListSkeleton />}
+
+        {listState.status === 'done' && zones.length === 0 && (
           <p className="text-sm text-gray-500">Žádné zóny. Vytvořte první zónu.</p>
-        ) : (
+        )}
+
+        {listState.status === 'done' && zones.length > 0 && (
           <div className="space-y-4">
             {zones.map((zone) => {
               const isEditing = editingId === zone.id

@@ -7,6 +7,7 @@ import { LightGrid } from './_components/LightGrid'
 import { EventLog, type ZoneEvent } from './_components/EventLog'
 import { SwitchToAutoButton } from './_components/SwitchToAutoButton'
 import { AddNodeButton } from './_components/AddNodeButton'
+import { SkeletonLine, SkeletonCard } from '@/app/_components/Skeleton'
 
 const modeLabel: Record<string, string> = {
   automatic: 'automatický režim',
@@ -51,27 +52,102 @@ type Zone = {
   }>
 }
 
+function ZoneDetailSkeleton() {
+  return (
+    <div className="p-6 max-w-4xl">
+      <div className="flex items-start justify-between mb-1">
+        <div className="space-y-2 flex-1 mr-4">
+          <SkeletonLine className="w-48" />
+          <SkeletonLine className="w-32 h-3" />
+        </div>
+        <div className="flex gap-2">
+          <SkeletonLine className="w-24 h-8 rounded-md" />
+          <SkeletonLine className="w-32 h-8 rounded-md" />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 mb-6 mt-3">
+        <SkeletonLine className="w-20 h-3" />
+        <SkeletonLine className="w-24 h-3" />
+      </div>
+
+      <SkeletonCard className="mb-6">
+        <SkeletonLine className="w-24 h-3 mb-4" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="border border-gray-100 rounded-lg p-4 space-y-2">
+              <SkeletonLine className="w-16 h-3" />
+              <SkeletonLine className="w-10 h-6" />
+            </div>
+          ))}
+        </div>
+      </SkeletonCard>
+
+      <SkeletonCard>
+        <SkeletonLine className="w-32 h-3 mb-4" />
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex gap-4">
+              <SkeletonLine className="w-24 h-3" />
+              <SkeletonLine className="flex-1 h-3" />
+              <SkeletonLine className="w-12 h-3" />
+            </div>
+          ))}
+        </div>
+      </SkeletonCard>
+    </div>
+  )
+}
+
+type PageState =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'notfound' }
+  | { status: 'done'; zone: Zone }
+
 export default function ZoneDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const [zone, setZone] = useState<Zone | null>(null)
-  const [isNotFound, setIsNotFound] = useState(false)
+  const [state, setState] = useState<PageState>({ status: 'loading' })
+  const [fetchKey, setFetchKey] = useState(0)
+  const isInvalidId = !id || !/^[a-f\d]{24}$/i.test(id)
 
   useEffect(() => {
-    if (!id?.match(/^[a-f\d]{24}$/i)) {
-      setIsNotFound(true)
-      return
-    }
+    if (isInvalidId) return
+
     fetch(`/api/zone/${id}`)
       .then(r => {
-        if (r.status === 404) { setIsNotFound(true); return null }
+        if (r.status === 404) { setState({ status: 'notfound' }); return null }
         return r.json()
       })
-      .then(data => { if (data) setZone(data) })
-      .catch(() => {})
-  }, [id])
+      .then(data => {
+        if (data) setState({ status: 'done', zone: data })
+      })
+      .catch(() => {
+        setState({ status: 'error', message: 'Nepodařilo se načíst zónu. Zkontrolujte připojení.' })
+      })
+  }, [id, isInvalidId, fetchKey])
 
-  if (isNotFound) notFound()
-  if (!zone) return null
+  if (isInvalidId || state.status === 'notfound') notFound()
+
+  if (state.status === 'error') {
+    return (
+      <div className="p-6 max-w-4xl">
+        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+          <span>{state.message}</span>
+          <button
+            onClick={() => { setState({ status: 'loading' }); setFetchKey(k => k + 1) }}
+            className="ml-4 px-3 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded transition-colors"
+          >
+            Zkusit znovu
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (state.status === 'loading') return <ZoneDetailSkeleton />
+
+  const { zone } = state
 
   const nodesForGrid = zone.nodes.map((n) => {
     const externalId = n.externalId ?? ''
