@@ -1,8 +1,7 @@
 'use client'
 
-import { useCallback, Suspense, useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { ClusterSidebar } from './_components/ClusterSidebar'
+import { useCallback, useEffect, useState } from 'react'
+import { ZoneSidebar } from './zones/_components/ZoneSidebar'
 import { NodeCard } from './_components/NodeCard'
 
 type ApiZone = {
@@ -22,9 +21,7 @@ type ApiZone = {
   }>
 }
 
-function DashboardContent() {
-  const searchParams = useSearchParams()
-  const selectedZoneId = searchParams.get('zone')
+export default function DashboardPage() {
   const [zones, setZones] = useState<ApiZone[]>([])
 
   const fetchZones = useCallback(() => {
@@ -40,11 +37,7 @@ function DashboardContent() {
 
   const now = Date.now()
 
-  const filteredZones = selectedZoneId
-    ? zones.filter((z) => z.id === selectedZoneId)
-    : zones
-
-  const displayNodes = filteredZones.flatMap((zone) =>
+  const displayNodes = zones.flatMap((zone) =>
     zone.nodes.map((node, i) => {
       const latestEvent = node.events[0] ?? null
       const lastStateChange = node.lastStateChange
@@ -89,20 +82,9 @@ function DashboardContent() {
     })
   )
 
-  const clusterHeading = selectedZoneId
-    ? (() => {
-      const z = zones.find((z) => z.id === selectedZoneId)
-      const i = zones.findIndex((z) => z.id === selectedZoneId)
-      return z ? `Cluster ${i + 1} — ${z.name}` : 'Neznámý cluster'
-    })()
-    : 'Všechny nody'
-
   return (
     <div className="flex flex-1 min-h-0">
-      <ClusterSidebar
-        zones={zones.map((z) => ({ id: z.id, name: z.name }))}
-        selectedZoneId={selectedZoneId}
-      />
+      <ZoneSidebar zones={zones.map((z) => ({ id: z.id, name: z.name }))} />
       <div className="flex-1 overflow-auto p-6">
         <div className="flex items-start gap-3 rounded-md bg-orange-50 border border-orange-200 px-4 py-3 mb-6 text-sm text-gray-700">
           <span className="text-orange-500 shrink-0 mt-0.5">⚡</span>
@@ -115,15 +97,12 @@ function DashboardContent() {
         </div>
 
         <h2 className="text-base font-semibold text-gray-900 mb-4">
-          Live stav nodů —{' '}
-          <span className="font-normal text-gray-600">{clusterHeading}</span>
+          Live stav nodů
         </h2>
 
         {displayNodes.length === 0 ? (
           <div className="py-16 text-center text-sm text-gray-400">
-            {selectedZoneId
-              ? 'Tento cluster nemá žádné nody.'
-              : 'Žádné nody nejsou registrovány.'}
+            Žádné nody nejsou registrovány.
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -134,13 +113,5 @@ function DashboardContent() {
         )}
       </div>
     </div>
-  )
-}
-
-export default function DashboardPage() {
-  return (
-    <Suspense>
-      <DashboardContent />
-    </Suspense>
   )
 }
