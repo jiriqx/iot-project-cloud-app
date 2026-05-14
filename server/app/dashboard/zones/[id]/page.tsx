@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { notFound } from 'next/navigation'
 import { LightGrid } from './_components/LightGrid'
@@ -57,18 +57,21 @@ export default function ZoneDetailPage() {
   const [zone, setZone] = useState<Zone | null>(null)
   const [isNotFound, setIsNotFound] = useState(false)
   const [editing, setEditing] = useState(false)
-  const [refetchKey, setRefetchKey] = useState(0)
 
-  useEffect(() => {
-    if (!isValidId) return
-    fetch(`/api/zone/${id}`)
+  const fetchZone = useCallback(() => {
+    if (!id?.match(/^[a-f\d]{24}$/i)) return Promise.resolve()
+    return fetch(`/api/zone/${id}`)
       .then(r => {
         if (r.status === 404) { setIsNotFound(true); return null }
         return r.json()
       })
       .then(data => { if (data) setZone(data) })
       .catch(() => {})
-  }, [id, isValidId, refetchKey])
+  }, [id])
+
+  useEffect(() => {
+    fetchZone()
+  }, [fetchZone])
 
   if (!isValidId || isNotFound) notFound()
   if (!zone) return null
@@ -113,7 +116,7 @@ export default function ZoneDetailPage() {
 </div>
         </div>
         <div className="flex items-center gap-2">
-          <AddNodeButton zoneId={zone.id} />
+          <AddNodeButton zoneId={zone.id} onAdded={fetchZone} />
           <button
             onClick={() => setEditing(true)}
             className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-300 rounded px-3 py-1.5 hover:bg-gray-50 transition-colors"
@@ -127,7 +130,7 @@ export default function ZoneDetailPage() {
         <div className="mb-4 p-4 bg-white border border-gray-200 rounded-lg">
           <ZoneEditForm
             zone={zone}
-            onSaved={() => { setEditing(false); setRefetchKey(k => k + 1) }}
+            onSaved={() => { setEditing(false); fetchZone() }}
             onCancel={() => setEditing(false)}
           />
         </div>

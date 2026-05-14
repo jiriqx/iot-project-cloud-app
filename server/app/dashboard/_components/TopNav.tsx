@@ -6,7 +6,6 @@ import { signOut } from 'next-auth/react'
 
 const navItems = [
   { label: 'Přehled', href: '/dashboard' },
-  { label: 'Správa zón', href: '/dashboard/zones' },
   { label: 'Statistiky', href: '/dashboard/statistics' },
 ]
 

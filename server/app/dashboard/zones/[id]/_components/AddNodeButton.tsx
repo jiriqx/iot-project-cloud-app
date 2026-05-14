@@ -1,12 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 const MAC_REGEX = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/
 
-export function AddNodeButton({ zoneId }: { zoneId: string }) {
-  const router = useRouter()
+export function AddNodeButton({ zoneId, onAdded }: { zoneId: string; onAdded?: () => void | Promise<void> }) {
   const [open, setOpen] = useState(false)
   const [mac, setMac] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -33,8 +31,8 @@ export function AddNodeButton({ zoneId }: { zoneId: string }) {
         body: JSON.stringify({ zoneId, mac }),
       })
       if (res.ok) {
+        await onAdded?.()
         handleClose()
-        router.refresh()
         return
       }
       if (res.status === 409) {
