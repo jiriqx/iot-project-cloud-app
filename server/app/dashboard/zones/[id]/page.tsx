@@ -5,8 +5,8 @@ import { useParams } from 'next/navigation'
 import { notFound } from 'next/navigation'
 import { LightGrid } from './_components/LightGrid'
 import { EventLog, type ZoneEvent } from './_components/EventLog'
-import { SwitchToAutoButton } from './_components/SwitchToAutoButton'
 import { AddNodeButton } from './_components/AddNodeButton'
+import { ZoneEditForm } from '../_components/ZoneEditForm'
 
 const modeLabel: Record<string, string> = {
   automatic: 'automatický režim',
@@ -53,14 +53,14 @@ type Zone = {
 
 export default function ZoneDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const isValidId = Boolean(id?.match(/^[a-f\d]{24}$/i))
   const [zone, setZone] = useState<Zone | null>(null)
   const [isNotFound, setIsNotFound] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [refetchKey, setRefetchKey] = useState(0)
 
   useEffect(() => {
-    if (!id?.match(/^[a-f\d]{24}$/i)) {
-      setIsNotFound(true)
-      return
-    }
+    if (!isValidId) return
     fetch(`/api/zone/${id}`)
       .then(r => {
         if (r.status === 404) { setIsNotFound(true); return null }
@@ -68,9 +68,9 @@ export default function ZoneDetailPage() {
       })
       .then(data => { if (data) setZone(data) })
       .catch(() => {})
-  }, [id])
+  }, [id, isValidId, refetchKey])
 
-  if (isNotFound) notFound()
+  if (!isValidId || isNotFound) notFound()
   if (!zone) return null
 
   const nodesForGrid = zone.nodes.map((n) => {
@@ -114,9 +114,24 @@ export default function ZoneDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           <AddNodeButton zoneId={zone.id} />
-          <SwitchToAutoButton zoneId={zone.id} />
+          <button
+            onClick={() => setEditing(true)}
+            className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-300 rounded px-3 py-1.5 hover:bg-gray-50 transition-colors"
+          >
+            Upravit
+          </button>
         </div>
       </div>
+
+      {editing && (
+        <div className="mb-4 p-4 bg-white border border-gray-200 rounded-lg">
+          <ZoneEditForm
+            zone={zone}
+            onSaved={() => { setEditing(false); setRefetchKey(k => k + 1) }}
+            onCancel={() => setEditing(false)}
+          />
+        </div>
+      )}
 
       <div className="flex items-center gap-3 mb-6 text-xs text-gray-400">
         <span>Timeout: {zone.timeoutSeconds} s</span>
