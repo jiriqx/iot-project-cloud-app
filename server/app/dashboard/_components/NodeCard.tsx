@@ -4,7 +4,7 @@ type NodeCardProps = {
   mac: string | null
   externalId: string | null
   status: string
-  lightStatus: 'on' | 'off' | 'offline' | 'unknown'
+  lightStatus: 'on' | 'off' | 'unknown'
   lightingMode: string
   lastEventAt: string | null
   lastTrigger: 'auto' | 'manual' | null

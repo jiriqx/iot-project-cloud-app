@@ -17,7 +17,6 @@ type RecentEvent = {
   light: string
   state: string
   trigger: string
-  durationSeconds: number | null
 }
 type ZoneOption = { id: string; name: string }
 
@@ -240,7 +239,6 @@ export default function StatisticsPage() {
           ) : (
             <ul className="divide-y divide-gray-100">
               {recentEvents.map((event) => {
-                const dur = formatDuration(event.durationSeconds)
                 return (
                   <li
                     key={event.id}
@@ -275,14 +273,6 @@ export default function StatisticsPage() {
                       {event.trigger}
                     </span>
 
-                    {/* Duration */}
-                    {dur ? (
-                      <span className="shrink-0 text-xs text-gray-400 w-20 text-right">
-                        trvání: {dur}
-                      </span>
-                    ) : (
-                      <span className="shrink-0 w-20" />
-                    )}
                   </li>
                 )
               })}

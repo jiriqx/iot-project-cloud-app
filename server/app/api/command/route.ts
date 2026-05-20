@@ -23,16 +23,7 @@ export async function POST(request: Request) {
   if ('command' in body) {
     publishCommand(gatewayId, deviceMac, { command: body.command });
 
-    // Update light status in DB so the dashboard reflects the change immediately
-    const light = await prisma.light.findFirst({ where: { nodeId: node.id } });
-    if (light) {
-      await prisma.light.update({
-        where: { id: light.id },
-        data: { status: body.command === 'on' ? 'on' : 'off' },
-      });
-    }
-
-    // Also insert into statechanges collection so lastStateChange is up to date
+    // Insert into statechanges collection so lastStateChange is up to date
     await prisma.$runCommandRaw({
       insert: 'statechanges',
       documents: [

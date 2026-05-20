@@ -54,7 +54,6 @@ export async function GET(request: NextRequest) {
       include: {
         nodes: {
           include: {
-            lights: true,
             events: { orderBy: { timestamp: "desc" }, take: 1 },
           },
         },
