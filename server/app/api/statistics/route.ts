@@ -175,7 +175,7 @@ export async function GET(request: NextRequest) {
       light: e.mac,
       state: e.state,
       trigger: e.trigger,
-      durationSeconds: null as number | null,
+
     }));
 
     return NextResponse.json({

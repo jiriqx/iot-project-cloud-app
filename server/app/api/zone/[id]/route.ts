@@ -22,13 +22,9 @@ export async function GET(
         include: {
             nodes: {
                 include: {
-                    lights: {
-                        include: {
-                            events: {
-                                orderBy: { timestamp: 'desc' },
-                                take: 50,
-                            },
-                        },
+                    events: {
+                        orderBy: { timestamp: 'desc' },
+                        take: 50,
                     },
                 },
             },

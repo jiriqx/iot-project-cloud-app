@@ -37,16 +37,11 @@ type Zone = {
   nodes: Array<{
     id: string
     externalId: string | null
-    lights: Array<{
+    events: Array<{
       id: string
-      status: string
-      events: Array<{
-        id: string
-        eventType: string
-        trigger: string
-        timestamp: string
-        durationSeconds: number | null
-      }>
+      eventType: string
+      trigger: string
+      timestamp: string
     }>
   }>
 }
@@ -80,7 +75,10 @@ export default function ZoneDetailPage() {
     const externalId = n.externalId ?? ''
     const deviceId = externalId.split('/')[1] ?? externalId
     const label = `Node ${deviceId}`
-    const status = (n.lights[0]?.status as 'on' | 'off' | 'offline') ?? 'offline'
+    const latestEvent = n.events[0]
+    const status: 'on' | 'off' | 'offline' = latestEvent
+      ? (latestEvent.eventType as 'on' | 'off')
+      : 'offline'
     return { id: n.id, externalId, label, status }
   })
 
@@ -89,16 +87,14 @@ export default function ZoneDetailPage() {
       const externalId = n.externalId ?? ''
       const deviceId = externalId.split('/')[1] ?? externalId
       const nodeLabel = `Node ${deviceId}`
-      return n.lights.flatMap((l) =>
-        l.events.map((e) => ({
-          id: e.id,
-          nodeLabel,
-          eventType: e.eventType as 'on' | 'off',
-          trigger: e.trigger as 'auto' | 'manual',
-          timestamp: e.timestamp,
-          durationSeconds: e.durationSeconds,
-        }))
-      )
+      return n.events.map((e) => ({
+        id: e.id,
+        nodeLabel,
+        eventType: e.eventType as 'on' | 'off',
+        trigger: e.trigger as 'auto' | 'manual',
+        timestamp: e.timestamp,
+
+      }))
     })
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     .slice(0, 20)

@@ -24,23 +24,9 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    const light = await prisma.light.findFirst({ where: { nodeId: node.id } });
-
-    if (!light) {
-        return NextResponse.json(
-            { error: "No light found for this node" },
-            { status: 404 }
-        );
-    }
-
-    await prisma.light.update({
-        where: { id: light.id },
-        data: { status: state ? "on" : "off" },
-    });
-
     const event = await prisma.lightEvent.create({
         data: {
-            lightId: light.id,
+            zoneId: node.zoneId,
             nodeId: node.id,
             eventType: state ? "on" : "off",
             trigger: "auto",

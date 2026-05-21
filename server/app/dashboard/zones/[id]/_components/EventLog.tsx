@@ -4,7 +4,6 @@ export type ZoneEvent = {
   eventType: 'on' | 'off'
   trigger: 'auto' | 'manual'
   timestamp: string
-  durationSeconds: number | null
 }
 
 function formatTime(iso: string) {
@@ -52,11 +51,6 @@ export function EventLog({ events }: { events: ZoneEvent[] }) {
             >
               {e.trigger === 'manual' ? 'manuálně' : 'auto'}
             </span>
-            {e.durationSeconds != null && (
-              <span className="text-xs text-gray-400 shrink-0">
-                trvání: {formatDuration(e.durationSeconds)}
-              </span>
-            )}
           </li>
         ))}
       </ul>

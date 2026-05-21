@@ -14,7 +14,6 @@ type ApiZone = {
     mac: string | null
     externalId: string | null
     status: string
-    lights: Array<{ status: string }>
     events: Array<{ timestamp: string; trigger: string }>
     lastStateChange: { state: boolean; timestamp: string; trigger: string } | null
     lastPing: string | null
@@ -48,16 +47,10 @@ export default function DashboardPage() {
         : false
       const effectiveStatus = pingRecent ? 'active' : 'inactive'
 
-      const lightStatus: 'on' | 'off' | 'offline' | 'unknown' =
-        node.lights.length === 0 && !lastStateChange
+      const lightStatus: 'on' | 'off' | 'unknown' =
+        !lastStateChange
           ? 'unknown'
-          : lastStateChange
-            ? lastStateChange.state ? 'on' : 'off'
-            : node.lights.some((l) => l.status === 'on')
-              ? 'on'
-              : node.lights.every((l) => l.status === 'offline')
-                ? 'offline'
-                : 'off'
+          : lastStateChange.state ? 'on' : 'off'
 
       let remainingSeconds: number | null = null
       const latestTimestamp = lastStateChange?.timestamp ?? latestEvent?.timestamp
