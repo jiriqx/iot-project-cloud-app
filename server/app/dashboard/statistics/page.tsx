@@ -1,26 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer,
+} from 'recharts'
 
-const PERIOD_OPTIONS = [
-  { label: '7 dní', days: 7 },
-  { label: '30 dní', days: 30 },
-  { label: '90 dní', days: 90 },
-] as const
-
-type Metrics = { totalHours: number; totalEvents: number; avgMinutes: number }
-type ZoneStat = { id: string; name: string; hours: number; anomaly: boolean }
-type RecentEvent = {
-  id: string
-  timestamp: string
-  zone: string
-  light: string
-  state: string
-  trigger: string
-}
 type ZoneOption = { id: string; name: string }
+type ZoneStat = { id: string; name: string; hours: number; onCount: number }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+function today(): string {
+  return new Date().toISOString().split('T')[0]
+}
 
 function MetricCard({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
@@ -34,251 +25,149 @@ function MetricCard({ label, value, unit }: { label: string; value: string; unit
   )
 }
 
-function formatTime(iso: string): string {
-  const d = new Date(iso)
-  const now = new Date()
-  const isToday = d.toDateString() === now.toDateString()
-  const time = d.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })
-  if (isToday) return `dnes ${time}`
-  const yesterday = new Date(now)
-  yesterday.setDate(yesterday.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return `včera ${time}`
-  return `${d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })} ${time}`
-}
-
-function formatDuration(seconds: number | null): string | null {
-  if (seconds == null || seconds <= 0) return null
-  if (seconds < 60) return `${seconds} s`
-  const min = Math.round(seconds / 60)
-  if (min < 60) return `${min} min`
-  const h = Math.floor(min / 60)
-  const m = min % 60
-  return m > 0 ? `${h} h ${m} min` : `${h} h`
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
-
 export default function StatisticsPage() {
-  const [days, setDays] = useState(30)
+  const [date, setDate] = useState(today)
   const [zoneId, setZoneId] = useState<string | null>(null)
   const [zones, setZones] = useState<ZoneOption[]>([])
-  const [metrics, setMetrics] = useState<Metrics>({ totalHours: 0, totalEvents: 0, avgMinutes: 0 })
-  const [zoneStats, setZoneStats] = useState<ZoneStat[]>([])
-  const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([])
+  const [allZoneStats, setAllZoneStats] = useState<ZoneStat[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Fetch zone list for filter pills
   useEffect(() => {
     fetch('/api/zone')
-      .then((r) => r.json())
-      .then((data) => {
-        const z = (data.zones ?? []).map((z: { id: string; name: string }) => ({ id: z.id, name: z.name }))
-        setZones(z)
+      .then(r => r.json())
+      .then(data => {
+        setZones((data.zones ?? []).map((z: ZoneOption) => ({ id: z.id, name: z.name })))
       })
-      .catch(() => { })
+      .catch(() => {})
   }, [])
 
-  const fetchStats = useCallback(() => {
+  const fetchStats = useCallback(async () => {
     setLoading(true)
-    const params = new URLSearchParams({ days: String(days) })
-    if (zoneId) params.set('zoneId', zoneId)
-    fetch(`/api/statistics?${params}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setMetrics(data.metrics)
-        setZoneStats(data.zoneStats ?? [])
-        setRecentEvents(data.recentEvents ?? [])
-      })
-      .catch(() => { })
-      .finally(() => setLoading(false))
-  }, [days, zoneId])
+    try {
+      const result = await fetch(`/api/stats/${date}`).then(r => r.ok ? r.json() : { zones: [] })
+
+      setAllZoneStats(
+        (result.zones ?? []).map((z: { zoneId: string; totalOnHours: number; onCount: number }) => ({
+          id: z.zoneId,
+          name: z.zoneId,
+          hours: Math.round(z.totalOnHours * 100) / 100,
+          onCount: z.onCount,
+        }))
+      )
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false)
+    }
+  }, [date])
 
   useEffect(() => {
     fetchStats()
   }, [fetchStats])
 
-  const maxHours = Math.max(...zoneStats.map((z) => z.hours), 1)
-  const anomalyZone = zoneStats.find((z) => z.anomaly)
+  // Resolve zone names
+  const statsWithNames: ZoneStat[] = allZoneStats.map(s => ({
+    ...s,
+    name: zones.find(z => z.id === s.id)?.name ?? s.id,
+  }))
+
+  // Local filtering by selected zone
+  const filteredStats = zoneId
+    ? statsWithNames.filter(s => s.id === zoneId)
+    : statsWithNames
+
+  const totalHours = Math.round(filteredStats.reduce((sum, z) => sum + z.hours, 0) * 100) / 100
+  const totalEvents = filteredStats.reduce((sum, z) => sum + z.onCount, 0)
 
   return (
     <div className="flex-1 overflow-auto p-6">
       <div className="max-w-5xl space-y-6">
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-900">
-            Přehled provozu osvětlení
-          </h1>
-        </div>
+        <h1 className="text-xl font-semibold text-gray-900">Přehled provozu osvětlení</h1>
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-4">
-          {/* Period pills */}
-          <div className="flex flex-wrap gap-2">
-            {PERIOD_OPTIONS.map((p) => (
-              <button
-                key={p.days}
-                type="button"
-                onClick={() => setDays(p.days)}
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${days === p.days
-                    ? 'bg-blue-600 border-blue-600 text-white font-medium'
-                    : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'
-                  }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            className="text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
 
           <div className="w-px h-5 bg-gray-200 hidden sm:block" />
 
-          {/* Zone pills */}
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setZoneId(null)}
-              className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${zoneId === null
-                  ? 'bg-blue-600 border-blue-600 text-white font-medium'
-                  : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'
-                }`}
-            >
-              Celá budova
-            </button>
-            {zones.map((z) => (
-              <button
-                key={z.id}
-                type="button"
-                onClick={() => setZoneId(z.id)}
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${zoneId === z.id
-                    ? 'bg-blue-600 border-blue-600 text-white font-medium'
-                    : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'
-                  }`}
-              >
-                {z.name}
-              </button>
+          <select
+            value={zoneId ?? ''}
+            onChange={e => setZoneId(e.target.value || null)}
+            className="text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Celá budova</option>
+            {zones.map(z => (
+              <option key={z.id} value={z.id}>{z.name}</option>
             ))}
-          </div>
+          </select>
         </div>
 
         {/* Metric cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <MetricCard
             label="Celková doba svícení"
-            value={metrics.totalHours.toLocaleString('cs-CZ')}
+            value={totalHours.toLocaleString('cs-CZ')}
             unit="hod"
           />
           <MetricCard
             label="Počet sepnutí"
-            value={metrics.totalEvents.toLocaleString('cs-CZ')}
+            value={totalEvents.toLocaleString('cs-CZ')}
             unit=""
           />
-          <MetricCard
-            label="Prům. doba / sepnutí"
-            value={String(metrics.avgMinutes)}
-            unit="min"
-          />
         </div>
 
-        {/* Bar chart */}
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4">
-            Doba svícení per zóna (hod / {days} dní)
-          </p>
+        {/* Charts */}
+        {loading ? (
+          <div className="bg-white rounded-lg border border-gray-200 p-10 text-center text-sm text-gray-400">
+            Načítám data...
+          </div>
+        ) : filteredStats.length === 0 ? (
+          <div className="bg-white rounded-lg border border-gray-200 p-10 text-center text-sm text-gray-400">
+            Žádná data pro vybrané období.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {zoneStats.length === 0 ? (
-            <p className="text-sm text-gray-400 py-4 text-center">Žádná data.</p>
-          ) : (
-            <div className="space-y-3">
-              {zoneStats.map((zone) => {
-                const widthPct = (zone.hours / maxHours) * 100
-                return (
-                  <div key={zone.id} className="flex items-center gap-3">
-                    <span className="w-28 shrink-0 text-sm text-gray-700 text-right">
-                      {zone.name}
-                    </span>
-                    <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
-                      <div
-                        className={`h-full rounded transition-all ${zone.anomaly ? 'bg-red-500' : 'bg-blue-500'
-                          }`}
-                        style={{ width: `${widthPct}%` }}
-                      />
-                    </div>
-                    <span
-                      className={`w-14 shrink-0 text-sm font-medium tabular-nums ${zone.anomaly ? 'text-red-500' : 'text-gray-700'
-                        }`}
-                    >
-                      {zone.hours} h
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* Anomaly alert */}
-          {anomalyZone && (
-            <div className="mt-4 flex items-start gap-2 rounded-md bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800">
-              <span className="shrink-0 mt-0.5">⚠</span>
-              <p>
-                <span className="font-medium">{anomalyZone.name}</span> vykazuje
-                výrazně vyšší dobu svícení — timeout pravděpodobně nastaven
-                příliš vysoký. Doporučeno zkontrolovat konfiguraci zóny.
+            {/* Hours per zone */}
+            <div className="bg-white rounded-lg border border-gray-200 p-5">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4">
+                Celková doba svícení per zóna (hod)
               </p>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={filteredStats} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(v) => [`${v} hod`, 'Svícení']} />
+                  <Bar dataKey="hours" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          )}
-        </div>
 
-        {/* Recent events */}
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <h2 className="text-sm font-medium text-gray-700 mb-4">
-            Poslední události
-          </h2>
+            {/* Activations per zone */}
+            <div className="bg-white rounded-lg border border-gray-200 p-5">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-4">
+                Počet sepnutí per zóna
+              </p>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={filteredStats} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                  <Tooltip formatter={(v) => [`${v}×`, 'Sepnutí']} />
+                  <Bar dataKey="onCount" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
 
-          {recentEvents.length === 0 ? (
-            <p className="text-sm text-gray-400 py-4 text-center">Žádné události.</p>
-          ) : (
-            <ul className="divide-y divide-gray-100">
-              {recentEvents.map((event) => {
-                return (
-                  <li
-                    key={event.id}
-                    className="flex items-center gap-4 py-2.5 text-sm"
-                  >
-                    {/* State dot */}
-                    <span
-                      className={`w-2 h-2 rounded-full shrink-0 ${event.state === 'zapnuto' ? 'bg-green-500' : 'bg-gray-300'
-                        }`}
-                    />
-
-                    {/* Time */}
-                    <span className="text-gray-400 w-28 shrink-0 tabular-nums">
-                      {formatTime(event.timestamp)}
-                    </span>
-
-                    {/* Zone · Light */}
-                    <span className="flex-1 text-gray-800">
-                      {event.zone}{' '}
-                      <span className="text-gray-400">·</span>{' '}
-                      {event.light}{' '}
-                      <span className="text-gray-500">— {event.state}</span>
-                    </span>
-
-                    {/* Trigger */}
-                    <span
-                      className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded ${event.trigger === 'auto'
-                          ? 'bg-blue-50 text-blue-600'
-                          : 'bg-yellow-100 text-yellow-700'
-                        }`}
-                    >
-                      {event.trigger}
-                    </span>
-
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
+          </div>
+        )}
 
       </div>
     </div>
