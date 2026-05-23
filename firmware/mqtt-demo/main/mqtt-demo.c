@@ -12,6 +12,8 @@
 #include "esp_netif.h"
 #include "mqtt_client.h"
 #include "esp_crt_bundle.h"
+#include "driver/gpio.h"
+#include "esp_timer.h"
 
 /* ── WiFi credentials (set via idf.py menuconfig) ────────────────────── */
 #define WIFI_SSID           CONFIG_WIFI_SSID
@@ -24,7 +26,18 @@
 #define MQTT_PASSWORD       CONFIG_MQTT_PASSWORD
 #define MQTT_GATEWAY_ID     CONFIG_MQTT_GATEWAY_ID
 
+/* ── GPIO Pins ────────────────────────────────────────────────────────── */
+#define PIR_PIN             GPIO_NUM_26
+#define RELAY_PIN           GPIO_NUM_25
+
+/* ── Relay timing ─────────────────────────────────────────────────────── */
+#define KEEP_ON_DURATION_MS 10000  /* 10 seconds */
+
 static const char *TAG = "mqtt-demo";
+
+/* Relay state tracking */
+static int64_t relay_off_time = 0;    /* Timestamp (us) when relay should turn off */
+static bool relay_is_active = false;  /* Whether the relay is currently ON */
 
 /* MAC address string buffer: "AA:BB:CC:DD:EE:FF" + null */
 static char device_mac[18];
@@ -182,18 +195,24 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
             ESP_LOGI(TAG, "Topic : %.*s", event->topic_len, event->topic);
             ESP_LOGI(TAG, "Data  : %.*s", event->data_len,  event->data);
 
-            /* Handle command: "on" or "off" — report state back as manual */
+            /* Handle command: "on" or "off" — control relay and report state */
             if (event->data_len > 0 && event->data_len < 16) {
                 char cmd[16];
                 int len = event->data_len < (int)sizeof(cmd) - 1 ? event->data_len : (int)sizeof(cmd) - 1;
                 memcpy(cmd, event->data, len);
                 cmd[len] = '\0';
 
-                if (strcmp(cmd, "on") == 0 || strcmp(cmd, "off") == 0) {
-                    char payload[48];
-                    snprintf(payload, sizeof(payload), "state=%s,trigger=manual", cmd);
-                    esp_mqtt_client_publish(client, topic_state, payload, 0, 1, 0);
-                    ESP_LOGI(TAG, "Command '%s' received, published: %s", cmd, payload);
+                if (strcmp(cmd, "on") == 0) {
+                    gpio_set_level(RELAY_PIN, 1);
+                    relay_is_active = true;
+                    relay_off_time = esp_timer_get_time() + (KEEP_ON_DURATION_MS * 1000LL);
+                    esp_mqtt_client_publish(client, topic_state, "state=on,trigger=manual", 0, 1, 0);
+                    ESP_LOGI(TAG, "Command 'on' received, relay ON");
+                } else if (strcmp(cmd, "off") == 0) {
+                    gpio_set_level(RELAY_PIN, 0);
+                    relay_is_active = false;
+                    esp_mqtt_client_publish(client, topic_state, "state=off,trigger=manual", 0, 1, 0);
+                    ESP_LOGI(TAG, "Command 'off' received, relay OFF");
                 }
             }
             break;
@@ -244,6 +263,47 @@ static void mqtt_start(void)
     xTaskCreate(ping_task, "ping_task", 2048, NULL, 5, NULL);
 }
 
+/* ── Sensor loop task ──────────────────────────────────────────────────*/
+
+static void sensor_loop_task(void *arg)
+{
+    (void)arg;
+    while (1) {
+        int pir_state = gpio_get_level(PIR_PIN);
+        int64_t current_time = esp_timer_get_time();
+
+        /* If motion is detected, turn/keep the relay ON and reset the timer */
+        if (pir_state == 1) {
+            relay_off_time = current_time + (KEEP_ON_DURATION_MS * 1000LL);
+
+            if (!relay_is_active) {
+                ESP_LOGI(TAG, "Motion detected! Relay ON.");
+                gpio_set_level(RELAY_PIN, 1);
+                relay_is_active = true;
+
+                if (mqtt_client) {
+                    esp_mqtt_client_publish(mqtt_client, topic_state,
+                                           "state=on,trigger=motion", 0, 1, 0);
+                }
+            }
+        }
+
+        /* If no motion, check if the 10-second window has expired */
+        if (relay_is_active && (current_time >= relay_off_time)) {
+            ESP_LOGI(TAG, "10 seconds passed since last motion. Relay OFF.");
+            gpio_set_level(RELAY_PIN, 0);
+            relay_is_active = false;
+
+            if (mqtt_client) {
+                esp_mqtt_client_publish(mqtt_client, topic_state,
+                                       "state=off,trigger=motion", 0, 1, 0);
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
 /* ── Entry point ───────────────────────────────────────────────────────*/
 
 void app_main(void)
@@ -256,9 +316,27 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(ret);
 
+    /* Configure GPIO pins */
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << RELAY_PIN),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&io_conf);
+    gpio_set_level(RELAY_PIN, 0);
+
+    io_conf.pin_bit_mask = (1ULL << PIR_PIN);
+    io_conf.mode = GPIO_MODE_INPUT;
+    gpio_config(&io_conf);
+
     get_device_mac();
     build_topics();
 
     wifi_init_sta();
     mqtt_start();
+
+    /* Start sensor loop task */
+    xTaskCreate(sensor_loop_task, "sensor_loop", 4096, NULL, 5, NULL);
 }
