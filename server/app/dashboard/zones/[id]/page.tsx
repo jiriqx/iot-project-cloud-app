@@ -37,6 +37,8 @@ type Zone = {
   nodes: Array<{
     id: string
     externalId: string | null
+    mac: string | null
+    isOnline: boolean
     events: Array<{
       id: string
       eventType: string
@@ -61,7 +63,7 @@ export default function ZoneDetailPage() {
         return r.json()
       })
       .then(data => { if (data) setZone(data) })
-      .catch(() => {})
+      .catch(() => { })
   }, [id])
 
   useEffect(() => {
@@ -76,9 +78,11 @@ export default function ZoneDetailPage() {
     const deviceId = externalId.split('/')[1] ?? externalId
     const label = `Node ${deviceId}`
     const latestEvent = n.events[0]
-    const status: 'on' | 'off' | 'offline' = latestEvent
-      ? (latestEvent.eventType as 'on' | 'off')
-      : 'offline'
+    const status: 'on' | 'off' | 'offline' = !n.isOnline
+      ? 'offline'
+      : latestEvent
+        ? (latestEvent.eventType as 'on' | 'off')
+        : 'off'
     return { id: n.id, externalId, label, status }
   })
 
@@ -107,9 +111,9 @@ export default function ZoneDetailPage() {
           <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
             <span>{zone.nodes.length} {zone.nodes.length === 1 ? 'node' : zone.nodes.length >= 2 && zone.nodes.length <= 4 ? 'nody' : 'nodů'}</span>
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${modeBadge[zone.lightingMode] ?? 'bg-gray-100 text-gray-600'}`}>
-                            {modeLabel[zone.lightingMode] ?? zone.lightingMode}
+              {modeLabel[zone.lightingMode] ?? zone.lightingMode}
             </span>
-</div>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <AddNodeButton zoneId={zone.id} onAdded={fetchZone} />
