@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     const zoneMap = new Map(zones.map((z) => [z.id, z.name]));
     const macToZone = new Map<string, { zoneId: string; zoneName: string }>();
-    let allMacs: string[] = [];
+    const allMacs: string[] = [];
 
     const targetZones = zoneId ? zones.filter((z) => z.id === zoneId) : zones;
     for (const z of targetZones) {
@@ -67,12 +67,19 @@ export async function GET(request: NextRequest) {
             timestamp: { $gte: { $date: since.toISOString() } },
           },
         },
-        { $sort: { deviceMac: 1, timestamp: 1 } },
+        { $sort: { timestamp: -1 } },
       ],
-      cursor: {},
+      cursor: { batchSize: 50000 },
     })) as { cursor?: { firstBatch?: Array<Record<string, unknown>> } };
 
     const docs = result.cursor?.firstBatch ?? [];
+
+    // Sort ascending for duration calculation
+    docs.sort(
+      (a, b) =>
+        parseMongoDate(a.timestamp).getTime() -
+        parseMongoDate(b.timestamp).getTime()
+    );
 
     // Group by MAC, ordered by timestamp
     const byMac = new Map<
@@ -92,7 +99,6 @@ export async function GET(request: NextRequest) {
     let totalOnSeconds = 0;
     let totalOnEvents = 0;
     const zoneSecondsMap = new Map<string, number>();
-    const zoneEventsMap = new Map<string, number>();
 
     for (const [mac, events] of byMac) {
       const info = macToZone.get(mac);
@@ -101,9 +107,7 @@ export async function GET(request: NextRequest) {
       for (let i = 0; i < events.length; i++) {
         const e = events[i];
         if (e.state) {
-          // on event — find the duration until the next off (or now)
           totalOnEvents++;
-          zoneEventsMap.set(info.zoneId, (zoneEventsMap.get(info.zoneId) ?? 0) + 1);
 
           let offTime = now;
           for (let j = i + 1; j < events.length; j++) {
@@ -152,33 +156,56 @@ export async function GET(request: NextRequest) {
     }));
 
     // ── Recent events (last 20, newest first) ──
-    const allEvents = docs
+    const recentEvents = docs
+      .slice()
+      .sort(
+        (a, b) =>
+          parseMongoDate(b.timestamp).getTime() -
+          parseMongoDate(a.timestamp).getTime()
+      )
+      .slice(0, 20)
       .map((doc) => {
         const mac = doc.deviceMac as string;
         const info = macToZone.get(mac);
         const rawId = doc._id as Record<string, unknown> | string;
-        const id = typeof rawId === "string" ? rawId : (rawId as Record<string, string>)?.$oid ?? String(rawId);
+        const id =
+          typeof rawId === "string"
+            ? rawId
+            : (rawId as Record<string, string>)?.$oid ?? String(rawId);
+        const ts = parseMongoDate(doc.timestamp);
+        const state = doc.state as boolean;
+
+        // Calculate duration for "on" events
+        let durationSeconds: number | null = null;
+        if (state) {
+          const macEvents = byMac.get(mac) ?? [];
+          const idx = macEvents.findIndex(
+            (e) => e.timestamp.getTime() === ts.getTime() && e.state
+          );
+          if (idx >= 0) {
+            let offTime = now;
+            for (let j = idx + 1; j < macEvents.length; j++) {
+              if (!macEvents[j].state) {
+                offTime = macEvents[j].timestamp;
+                break;
+              }
+            }
+            durationSeconds = Math.round(
+              (offTime.getTime() - ts.getTime()) / 1000
+            );
+          }
+        }
+
         return {
           id,
-          timestamp: parseMongoDate(doc.timestamp),
+          timestamp: ts.toISOString(),
           zone: info?.zoneName ?? "",
-          mac,
-          state: (doc.state as boolean) ? "zapnuto" : "zhasnuto",
+          light: mac,
+          state: state ? "zapnuto" : "zhasnuto",
           trigger: (doc.trigger as string) === "manual" ? "manuálně" : "auto",
+          durationSeconds,
         };
-      })
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, 20);
-
-    const recentEvents = allEvents.map((e) => ({
-      id: e.id,
-      timestamp: e.timestamp.toISOString(),
-      zone: e.zone,
-      light: e.mac,
-      state: e.state,
-      trigger: e.trigger,
-
-    }));
+      });
 
     return NextResponse.json({
       metrics: { totalHours, totalEvents: totalOnEvents, avgMinutes },

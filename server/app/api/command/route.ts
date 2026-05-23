@@ -1,4 +1,4 @@
-import { publishCommand, publishConfig } from '@/lib/mqtt';
+import { publishCommand } from '@/lib/mqtt';
 import prisma from '@/lib/prisma';
 import type { CommandPayload, ConfigPayload } from '@/lib/types';
 
@@ -36,8 +36,6 @@ export async function POST(request: Request) {
         },
       ],
     });
-  } else if ('timeoutMs' in body) {
-    publishConfig(gatewayId, deviceMac, { timeoutMs: body.timeoutMs });
   } else {
     return Response.json({ error: 'Invalid payload' }, { status: 400 });
   }
