@@ -123,16 +123,26 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const FIVE_MINUTES_MS = 5 * 60 * 1000;
+    const nowMs = Date.now();
+
     const enrichedZones = zones.map((zone) => ({
       ...zone,
-      nodes: zone.nodes.map((node) => ({
-        ...node,
-        lastStateChange: node.mac ? stateMap.get(node.mac) ?? null : null,
-        lastPing: node.mac ? pingMap.get(node.mac) ?? null : null,
-      })),
+      nodes: zone.nodes.map((node) => {
+        const lastPingStr = node.mac ? pingMap.get(node.mac) ?? null : null;
+        const isOnline = lastPingStr
+          ? nowMs - new Date(lastPingStr).getTime() < FIVE_MINUTES_MS
+          : false;
+        return {
+          ...node,
+          lastStateChange: node.mac ? stateMap.get(node.mac) ?? null : null,
+          lastPing: lastPingStr,
+          isOnline,
+        };
+      }),
     }));
 
-    return NextResponse.json({ zones: enrichedZones, serverTime: new Date().toISOString() }, { status: 200 });
+    return NextResponse.json({ zones: enrichedZones }, { status: 200 });
   } catch (error) {
     console.error("GET /api/zone error:", error);
     return NextResponse.json(

@@ -17,20 +17,17 @@ type ApiZone = {
     events: Array<{ timestamp: string; trigger: string }>
     lastStateChange: { state: boolean; timestamp: string; trigger: string } | null
     lastPing: string | null
+    isOnline: boolean
   }>
 }
 
 export default function DashboardPage() {
   const [zones, setZones] = useState<ApiZone[]>([])
-  const [serverTime, setServerTime] = useState<string | null>(null)
 
   const fetchZones = useCallback(() => {
     fetch('/api/zone')
       .then(r => r.json())
-      .then(data => {
-        setZones(data.zones ?? [])
-        setServerTime(data.serverTime ?? null)
-      })
+      .then(data => setZones(data.zones ?? []))
       .catch(() => { })
   }, [])
 
@@ -38,18 +35,14 @@ export default function DashboardPage() {
     fetchZones()
   }, [fetchZones])
 
-  const now = serverTime ? new Date(serverTime).getTime() : Date.now()
+  const now = Date.now()
 
   const displayNodes = zones.flatMap((zone) =>
     zone.nodes.map((node, i) => {
       const latestEvent = node.events[0] ?? null
       const lastStateChange = node.lastStateChange
 
-      const ONE_MINUTE_MS = 5 * 60 * 1000
-      const pingRecent = node.lastPing
-        ? now - new Date(node.lastPing).getTime() < ONE_MINUTE_MS
-        : false
-      const effectiveStatus = pingRecent ? 'active' : 'inactive'
+      const effectiveStatus = node.isOnline ? 'active' : 'inactive'
 
       const lightStatus: 'on' | 'off' | 'unknown' =
         !lastStateChange
