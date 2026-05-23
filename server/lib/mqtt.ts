@@ -1,4 +1,5 @@
 import mqtt from 'mqtt';
+import prisma from './prisma';
 import type { CommandPayload, ConfigPayload } from './types';
 
 const MQTT_HOST = process.env.MQTT_HOST!;
@@ -34,13 +35,34 @@ function getClient(): mqtt.MqttClient {
     });
   });
 
-  client.on('message', (topic, raw) => {
+  /*client.on('message', async (topic, raw) => {
     const parts = topic.split('/'); // ['iot', 'v1', gatewayId, deviceMac, 'state']
     const [, , gatewayId, deviceMac] = parts;
     const payload = parsePayload(raw.toString());
     console.log(`[MQTT] state from gateway=${gatewayId} deviceMac=${deviceMac}:`, payload);
-    // TODO: save to database
-  });
+
+    const state = payload.state === 'on';
+    const trigger = payload.trigger ?? 'auto';
+
+    try {
+      const node = await prisma.node.findUnique({ where: { mac: deviceMac } });
+      if (node) {
+        await prisma.lightEvent.create({
+          data: {
+            zoneId: node.zoneId,
+            nodeId: node.id,
+            eventType: state ? 'on' : 'off',
+            trigger,
+          },
+        });
+        console.log(`[MQTT] LightEvent saved for ${deviceMac}`);
+      } else {
+        console.warn(`[MQTT] Node with mac '${deviceMac}' not found, skipping event`);
+      }
+    } catch (err) {
+      console.error('[MQTT] Failed to save LightEvent:', err);
+    }
+  });*/
 
   client.on('error', (err) => console.error('[MQTT] Error:', err));
 
@@ -56,6 +78,7 @@ export function publishCommand(gatewayId: string, deviceMac: string, payload: Co
   });
 }
 
+// delete
 export function publishConfig(gatewayId: string, deviceMac: string, payload: ConfigPayload): void {
   const topic = `iot/v1/${gatewayId}/${deviceMac}/config`;
   const message = `timeoutMs=${payload.timeoutMs}`;
@@ -65,6 +88,7 @@ export function publishConfig(gatewayId: string, deviceMac: string, payload: Con
   });
 }
 
+// delete
 export function startMqttSubscriber(): void {
   if (!MQTT_HOST) {
     console.warn('[MQTT] MQTT_HOST not set, skipping MQTT connection');
