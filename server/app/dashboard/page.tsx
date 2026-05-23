@@ -22,11 +22,15 @@ type ApiZone = {
 
 export default function DashboardPage() {
   const [zones, setZones] = useState<ApiZone[]>([])
+  const [serverTime, setServerTime] = useState<string | null>(null)
 
   const fetchZones = useCallback(() => {
     fetch('/api/zone')
       .then(r => r.json())
-      .then(data => setZones(data.zones ?? []))
+      .then(data => {
+        setZones(data.zones ?? [])
+        setServerTime(data.serverTime ?? null)
+      })
       .catch(() => { })
   }, [])
 
@@ -34,7 +38,7 @@ export default function DashboardPage() {
     fetchZones()
   }, [fetchZones])
 
-  const now = Date.now()
+  const now = serverTime ? new Date(serverTime).getTime() : Date.now()
 
   const displayNodes = zones.flatMap((zone) =>
     zone.nodes.map((node, i) => {
