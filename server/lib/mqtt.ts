@@ -20,43 +20,6 @@ export function getClient(): mqtt.MqttClient {
     password: MQTT_PASSWORD,
   });
 
-  // client.on('connect', () => {
-  //   console.log('[MQTT] Connected to broker');
-  //   client!.subscribe('iot/v1/+/+/state', (err) => {
-  //     if (err) console.error('[MQTT] Subscribe error:', err);
-  //     else console.log('[MQTT] Subscribed to iot/v1/+/+/state');
-  //   });
-  // });
-
-  /*client.on('message', async (topic, raw) => {
-    const parts = topic.split('/'); // ['iot', 'v1', gatewayId, deviceMac, 'state']
-    const [, , gatewayId, deviceMac] = parts;
-    const payload = parsePayload(raw.toString());
-    console.log(`[MQTT] state from gateway=${gatewayId} deviceMac=${deviceMac}:`, payload);
-
-    const state = payload.state === 'on';
-    const trigger = payload.trigger ?? 'auto';
-
-    try {
-      const node = await prisma.node.findUnique({ where: { mac: deviceMac } });
-      if (node) {
-        await prisma.lightEvent.create({
-          data: {
-            zoneId: node.zoneId,
-            nodeId: node.id,
-            eventType: state ? 'on' : 'off',
-            trigger,
-          },
-        });
-        console.log(`[MQTT] LightEvent saved for ${deviceMac}`);
-      } else {
-        console.warn(`[MQTT] Node with mac '${deviceMac}' not found, skipping event`);
-      }
-    } catch (err) {
-      console.error('[MQTT] Failed to save LightEvent:', err);
-    }
-  });*/
-
   client.on('error', (err) => console.error('[MQTT] Error:', err));
 
   return client;
