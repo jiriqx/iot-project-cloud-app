@@ -8,7 +8,6 @@ const MQTT_PASSWORD = process.env.MQTT_PASSWORD!;
 const GATEWAY_ID = 'gateway-1';
 const DEVICE_ID = '30-E3-A4-DF-C2-E4';
 const topicState = `iot/v1/${GATEWAY_ID}/${DEVICE_ID}/state`;
-const topicCommand = `iot/v1/gateway-1/70:4B:CA:46:BF:AC/command`;
 const message = 'state=on';
 
 const client = mqtt.connect(`mqtt://${MQTT_HOST}:${MQTT_PORT}`, {
