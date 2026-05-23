@@ -76,8 +76,7 @@ export default function ZoneDetailPage() {
 
   const nodesForGrid = zone.nodes.map((n) => {
     const externalId = n.externalId ?? ''
-    const deviceId = externalId.split('/')[1] ?? externalId
-    const label = `Node ${deviceId}`
+    const label = n.mac ?? 'No MAC'
     const status: 'on' | 'off' | 'offline' = !n.isOnline
       ? 'offline'
       : n.lastStateChange
