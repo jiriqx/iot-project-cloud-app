@@ -38,6 +38,7 @@ static const char *TAG = "mqtt-demo";
 /* Relay state tracking */
 static int64_t relay_off_time = 0;    /* Timestamp (us) when relay should turn off */
 static bool relay_is_active = false;  /* Whether the relay is currently ON */
+static int keep_on_duration_ms = KEEP_ON_DURATION_MS; /* Configurable timeout */
 
 /* MAC address string buffer: "AA:BB:CC:DD:EE:FF" + null */
 static char device_mac[18];
@@ -46,6 +47,7 @@ static char device_mac[18];
 static char topic_subscribe[64];   /* iot/v1/{gatewayId}/{mac}/command */
 static char topic_state[64];       /* iot/v1/{gatewayId}/{mac}/state  */
 static char topic_ping[64];        /* iot/v1/{gatewayId}/{mac}/ping   */
+static char topic_config[64];      /* iot/v1/{gatewayId}/{mac}/config  */
 
 /* MQTT client handle for ping task */
 static esp_mqtt_client_handle_t mqtt_client = NULL;
@@ -68,9 +70,12 @@ static void build_topics(void)
              "iot/v1/%s/%s/state", MQTT_GATEWAY_ID, device_mac);
     snprintf(topic_ping, sizeof(topic_ping),
              "iot/v1/%s/%s/ping", MQTT_GATEWAY_ID, device_mac);
+    snprintf(topic_config, sizeof(topic_config),
+             "iot/v1/%s/%s/config", MQTT_GATEWAY_ID, device_mac);
     ESP_LOGI(TAG, "Subscribe topic: %s", topic_subscribe);
     ESP_LOGI(TAG, "Publish topic:   %s", topic_state);
     ESP_LOGI(TAG, "Ping topic:      %s", topic_ping);
+    ESP_LOGI(TAG, "Config topic:    %s", topic_config);
 }
 
 static EventGroupHandle_t s_wifi_event_group;
@@ -179,6 +184,10 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
             /* Subscribe to command topic */
             esp_mqtt_client_subscribe(client, topic_subscribe, 1);
             ESP_LOGI(TAG, "Subscribed to topic: \"%s\"", topic_subscribe);
+
+            /* Subscribe to config topic */
+            esp_mqtt_client_subscribe(client, topic_config, 1);
+            ESP_LOGI(TAG, "Subscribed to topic: \"%s\"", topic_config);
             break;
 
         case MQTT_EVENT_DISCONNECTED:
@@ -194,6 +203,28 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
             ESP_LOGI(TAG, "--- Message received ---");
             ESP_LOGI(TAG, "Topic : %.*s", event->topic_len, event->topic);
             ESP_LOGI(TAG, "Data  : %.*s", event->data_len,  event->data);
+
+            /* Handle config: "timeout=xx" — update relay timeout */
+            if (event->topic_len == (int)strlen(topic_config) &&
+                strncmp(event->topic, topic_config, event->topic_len) == 0) {
+                if (event->data_len > 0 && event->data_len < 32) {
+                    char cfg[32];
+                    int len = event->data_len < (int)sizeof(cfg) - 1 ? event->data_len : (int)sizeof(cfg) - 1;
+                    memcpy(cfg, event->data, len);
+                    cfg[len] = '\0';
+
+                    char *val = strchr(cfg, '=');
+                    if (val && strncmp(cfg, "timeout", val - cfg) == 0) {
+                        val++;
+                        int seconds = atoi(val);
+                        if (seconds > 0) {
+                            keep_on_duration_ms = seconds * 1000;
+                            ESP_LOGI(TAG, "Timeout updated to %d seconds", seconds);
+                        }
+                    }
+                }
+                break;
+            }
 
             /* Handle command: "command=on" or "command=off" — control relay and report state */
             if (event->data_len > 0 && event->data_len < 32) {
@@ -213,7 +244,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
                 if (strcmp(value, "on") == 0) {
                     gpio_set_level(RELAY_PIN, 1);
                     relay_is_active = true;
-                    relay_off_time = esp_timer_get_time() + (KEEP_ON_DURATION_MS * 1000LL);
+                    relay_off_time = esp_timer_get_time() + (keep_on_duration_ms * 1000LL);
                     esp_mqtt_client_publish(client, topic_state, "state=on,trigger=manual", 0, 1, 0);
                     ESP_LOGI(TAG, "Command 'on' received, relay ON");
                 } else if (strcmp(value, "off") == 0) {
@@ -282,7 +313,7 @@ static void sensor_loop_task(void *arg)
 
         /* If motion is detected, turn/keep the relay ON and reset the timer */
         if (pir_state == 1) {
-            relay_off_time = current_time + (KEEP_ON_DURATION_MS * 1000LL);
+            relay_off_time = current_time + (keep_on_duration_ms * 1000LL);
 
             if (!relay_is_active) {
                 ESP_LOGI(TAG, "Motion detected! Relay ON.");
