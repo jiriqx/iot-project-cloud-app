@@ -291,7 +291,7 @@ static void sensor_loop_task(void *arg)
 
                 if (mqtt_client) {
                     esp_mqtt_client_publish(mqtt_client, topic_state,
-                                           "state=on,trigger=motion", 0, 1, 0);
+                                           "state=on,trigger=auto", 0, 1, 0);
                 }
             }
         }
@@ -304,7 +304,7 @@ static void sensor_loop_task(void *arg)
 
             if (mqtt_client) {
                 esp_mqtt_client_publish(mqtt_client, topic_state,
-                                       "state=off,trigger=motion", 0, 1, 0);
+                                       "state=off,trigger=auto", 0, 1, 0);
             }
         }
 
