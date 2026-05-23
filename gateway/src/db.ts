@@ -30,7 +30,7 @@ const nodeSchema = new mongoose.Schema({
 
 export const Node =
   mongoose.models.Node ??
-  mongoose.model('Node', nodeSchema);
+  mongoose.model('Node', nodeSchema, 'Node');
 
 const zoneSchema = new mongoose.Schema({
   ownerId: { type: mongoose.Schema.Types.ObjectId },
@@ -44,7 +44,7 @@ const zoneSchema = new mongoose.Schema({
 
 export const Zone =
   mongoose.models.Zone ??
-  mongoose.model('Zone', zoneSchema);
+  mongoose.model('Zone', zoneSchema, 'Zone');
 
 let connected = false;
 
