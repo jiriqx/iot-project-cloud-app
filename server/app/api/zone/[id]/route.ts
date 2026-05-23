@@ -35,12 +35,13 @@ export async function GET(
         return NextResponse.json({ error: "Zone not found" }, { status: 404 });
     }
 
-    // Compute isOnline from pings collection
+    // Compute isOnline and lastStateChange from gateway collections
     const allMacs = zone.nodes
         .map((n) => n.mac)
         .filter((m): m is string => !!m);
 
     const pingMap = new Map<string, number>();
+    const stateMap = new Map<string, { state: boolean; timestamp: string; trigger: string }>();
 
     if (allMacs.length > 0) {
         const pingResult = (await prisma.$runCommandRaw({
@@ -63,6 +64,39 @@ export async function GET(
             }
             pingMap.set(doc.deviceMac as string, epoch);
         }
+
+        // Query statechanges for latest state per MAC
+        const stateResult = (await prisma.$runCommandRaw({
+            aggregate: "statechanges",
+            pipeline: [
+                { $match: { deviceMac: { $in: allMacs } } },
+                { $sort: { timestamp: -1 } },
+                {
+                    $group: {
+                        _id: "$deviceMac",
+                        state: { $first: "$state" },
+                        timestamp: { $first: "$timestamp" },
+                        trigger: { $first: "$trigger" },
+                    },
+                },
+            ],
+            cursor: {},
+        })) as { cursor?: { firstBatch?: Array<Record<string, unknown>> } };
+
+        for (const doc of stateResult.cursor?.firstBatch ?? []) {
+            const ts = (doc.timestamp as Record<string, unknown>)?.$date;
+            const timestamp =
+                typeof ts === "string"
+                    ? ts
+                    : typeof (ts as Record<string, string>)?.$numberLong === "string"
+                        ? new Date(parseInt((ts as Record<string, string>).$numberLong)).toISOString()
+                        : new Date(doc.timestamp as string).toISOString();
+            stateMap.set(doc._id as string, {
+                state: doc.state as boolean,
+                timestamp,
+                trigger: (doc.trigger as string) ?? "auto",
+            });
+        }
     }
 
     const FIVE_MINUTES_MS = 5 * 60 * 1000;
@@ -75,6 +109,7 @@ export async function GET(
             isOnline: node.mac
                 ? (pingMap.has(node.mac) && nowMs - pingMap.get(node.mac)! < FIVE_MINUTES_MS)
                 : false,
+            lastStateChange: node.mac ? stateMap.get(node.mac) ?? null : null,
         })),
     };
 
