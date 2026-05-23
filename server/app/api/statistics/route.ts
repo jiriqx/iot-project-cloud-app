@@ -156,8 +156,10 @@ export async function GET(request: NextRequest) {
       .map((doc) => {
         const mac = doc.deviceMac as string;
         const info = macToZone.get(mac);
+        const rawId = doc._id as Record<string, unknown> | string;
+        const id = typeof rawId === "string" ? rawId : (rawId as Record<string, string>)?.$oid ?? String(rawId);
         return {
-          id: String(doc._id),
+          id,
           timestamp: parseMongoDate(doc.timestamp),
           zone: info?.zoneName ?? "",
           mac,
