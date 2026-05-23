@@ -6,9 +6,7 @@ const MQTT_PORT = Number(process.env.MQTT_PORT ?? 1883);
 const MQTT_USERNAME = process.env.MQTT_USERNAME!;
 const MQTT_PASSWORD = process.env.MQTT_PASSWORD!;
 
-// Topic: iot/v1/{gatewayId}/{deviceMac}/state  payload: "state=on" | "state=off"
 const TOPIC_STATE = 'iot/v1/+/+/state';
-// Topic: iot/v1/{gatewayId}/{deviceMac}/ping   payload: "ping"
 const TOPIC_PING = 'iot/v1/+/+/ping';
 
 async function start() {
@@ -71,7 +69,6 @@ async function start() {
   client.on('close', () => console.log('MQTT connection closed'));
   client.on('offline', () => console.log('MQTT client offline'));
   client.on('reconnect', () => console.log('MQTT reconnecting...'));
-
 }
 
 start();
