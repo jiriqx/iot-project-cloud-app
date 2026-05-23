@@ -123,6 +123,10 @@ export default function ZoneDetailPage() {
 
   useEffect(() => {
     fetchZone()
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchZone()
+    }, 5000)
+    return () => clearInterval(interval)
   }, [fetchZone, fetchKey])
 
   if (isInvalidId || state.status === 'notfound') notFound()
