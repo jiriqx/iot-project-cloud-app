@@ -195,20 +195,28 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
             ESP_LOGI(TAG, "Topic : %.*s", event->topic_len, event->topic);
             ESP_LOGI(TAG, "Data  : %.*s", event->data_len,  event->data);
 
-            /* Handle command: "on" or "off" — control relay and report state */
-            if (event->data_len > 0 && event->data_len < 16) {
-                char cmd[16];
+            /* Handle command: "command=on" or "command=off" — control relay and report state */
+            if (event->data_len > 0 && event->data_len < 32) {
+                char cmd[32];
                 int len = event->data_len < (int)sizeof(cmd) - 1 ? event->data_len : (int)sizeof(cmd) - 1;
                 memcpy(cmd, event->data, len);
                 cmd[len] = '\0';
 
-                if (strcmp(cmd, "on") == 0) {
+                /* Parse "command=<value>" format */
+                char *value = strchr(cmd, '=');
+                if (value) {
+                    value++; /* skip '=' */
+                } else {
+                    value = cmd; /* fallback: plain "on"/"off" */
+                }
+
+                if (strcmp(value, "on") == 0) {
                     gpio_set_level(RELAY_PIN, 1);
                     relay_is_active = true;
                     relay_off_time = esp_timer_get_time() + (KEEP_ON_DURATION_MS * 1000LL);
                     esp_mqtt_client_publish(client, topic_state, "state=on,trigger=manual", 0, 1, 0);
                     ESP_LOGI(TAG, "Command 'on' received, relay ON");
-                } else if (strcmp(cmd, "off") == 0) {
+                } else if (strcmp(value, "off") == 0) {
                     gpio_set_level(RELAY_PIN, 0);
                     relay_is_active = false;
                     esp_mqtt_client_publish(client, topic_state, "state=off,trigger=manual", 0, 1, 0);
