@@ -39,6 +39,7 @@ type Zone = {
     externalId: string | null
     mac: string | null
     isOnline: boolean
+    lastStateChange: { state: boolean; timestamp: string; trigger: string } | null
     events: Array<{
       id: string
       eventType: string
@@ -75,13 +76,11 @@ export default function ZoneDetailPage() {
 
   const nodesForGrid = zone.nodes.map((n) => {
     const externalId = n.externalId ?? ''
-    const deviceId = externalId.split('/')[1] ?? externalId
-    const label = `Node ${deviceId}`
-    const latestEvent = n.events[0]
+    const label = n.mac ?? 'No MAC'
     const status: 'on' | 'off' | 'offline' = !n.isOnline
       ? 'offline'
-      : latestEvent
-        ? (latestEvent.eventType as 'on' | 'off')
+      : n.lastStateChange
+        ? (n.lastStateChange.state ? 'on' : 'off')
         : 'off'
     return { id: n.id, externalId, label, status }
   })
@@ -148,7 +147,7 @@ export default function ZoneDetailPage() {
         )}
       </div>
 
-      <LightGrid nodes={nodesForGrid} />
+      <LightGrid nodes={nodesForGrid} onRefresh={fetchZone} />
 
       {events.length > 0 && <EventLog events={events} />}
     </div>
