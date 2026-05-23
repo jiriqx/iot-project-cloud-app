@@ -148,7 +148,7 @@ export default function ZoneDetailPage() {
         )}
       </div>
 
-      <LightGrid nodes={nodesForGrid} />
+      <LightGrid nodes={nodesForGrid} onRefresh={fetchZone} />
 
       {events.length > 0 && <EventLog events={events} />}
     </div>

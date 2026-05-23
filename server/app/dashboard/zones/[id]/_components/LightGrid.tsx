@@ -20,8 +20,8 @@ function BulbIcon({ status }: { status: 'on' | 'off' | 'offline' }) {
     status === 'on'
       ? 'text-yellow-400'
       : status === 'offline'
-      ? 'text-gray-200'
-      : 'text-gray-300'
+        ? 'text-gray-200'
+        : 'text-gray-300'
   return (
     <svg
       width="36"
@@ -36,17 +36,15 @@ function BulbIcon({ status }: { status: 'on' | 'off' | 'offline' }) {
   )
 }
 
-async function sendCommand(externalId: string, command: 'on' | 'off') {
-  const [gatewayId, deviceId] = externalId.split('/')
-  if (!gatewayId || !deviceId) return
+async function sendCommand(nodeId: string, command: 'on' | 'off') {
   await fetch('/api/command', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ gatewayId, deviceId, command }),
+    body: JSON.stringify({ gatewayId: 'gateway-1', nodeId, command }),
   })
 }
 
-export function LightGrid({ nodes }: { nodes: Node[] }) {
+export function LightGrid({ nodes, onRefresh }: { nodes: Node[]; onRefresh?: () => void }) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [isPending, startTransition] = useTransition()
 
@@ -62,11 +60,9 @@ export function LightGrid({ nodes }: { nodes: Node[] }) {
   function handleCommand(nodeIds: string[], command: 'on' | 'off') {
     startTransition(async () => {
       await Promise.all(
-        nodeIds
-          .map((id) => nodes.find((n) => n.id === id))
-          .filter((n): n is Node => !!n?.externalId)
-          .map((n) => sendCommand(n.externalId, command))
+        nodeIds.map((id) => sendCommand(id, command))
       )
+      onRefresh?.()
     })
   }
 
@@ -103,8 +99,8 @@ export function LightGrid({ nodes }: { nodes: Node[] }) {
                 isOffline
                   ? 'opacity-50 cursor-not-allowed border-gray-200 bg-white'
                   : isSelected
-                  ? 'border-blue-400 bg-blue-50 cursor-pointer'
-                  : 'border-gray-200 bg-white hover:border-gray-300 cursor-pointer',
+                    ? 'border-blue-400 bg-blue-50 cursor-pointer'
+                    : 'border-gray-200 bg-white hover:border-gray-300 cursor-pointer',
               ].join(' ')}
             >
               <BulbIcon status={node.status} />
