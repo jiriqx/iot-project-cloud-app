@@ -1,5 +1,5 @@
 import mqtt from 'mqtt';
-import { saveStateChange, savePing } from './db';
+import { connectDb, saveStateChange, savePing } from './db';
 
 const MQTT_HOST = process.env.MQTT_HOST!;
 const MQTT_PORT = Number(process.env.MQTT_PORT ?? 1883);
@@ -11,7 +11,8 @@ const TOPIC_STATE = 'iot/v1/+/+/state';
 // Topic: iot/v1/{gatewayId}/{deviceMac}/ping   payload: "ping"
 const TOPIC_PING = 'iot/v1/+/+/ping';
 
-function start() {
+async function start() {
+  await connectDb();
   const client = mqtt.connect(`mqtt://${MQTT_HOST}:${MQTT_PORT}`, {
     username: MQTT_USERNAME,
     password: MQTT_PASSWORD,

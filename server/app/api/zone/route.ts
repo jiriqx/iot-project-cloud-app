@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
       })),
     }));
 
-    return NextResponse.json({ zones: enrichedZones }, { status: 200 });
+    return NextResponse.json({ zones: enrichedZones, serverTime: new Date().toISOString() }, { status: 200 });
   } catch (error) {
     console.error("GET /api/zone error:", error);
     return NextResponse.json(
