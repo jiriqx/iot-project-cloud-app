@@ -82,9 +82,19 @@ export async function savePing(deviceMac: string): Promise<Date | null> {
 
 export async function getTimeoutForDevice(deviceMac: string): Promise<number | null> {
   await connectDb();
-  const node = await Node.findOne({ mac: deviceMac });
-  if (!node) return null;
+  const node = await Node.findOne({ mac: { $regex: new RegExp(`^${deviceMac}$`, 'i') } });
+  if (!node) {
+    console.warn(`[DB] No node found for MAC: ${deviceMac}`);
+    return null;
+  }
   const zone = await Zone.findById(node.zoneId);
-  if (!zone) return null;
-  return zone.timeoutSeconds ?? null;
+  if (!zone) {
+    console.warn(`[DB] No zone found for node ${node._id} (zoneId: ${node.zoneId})`);
+    return null;
+  }
+  if (zone.timeoutSeconds == null) {
+    console.warn(`[DB] Zone "${zone.name}" has no timeoutSeconds configured`);
+    return null;
+  }
+  return zone.timeoutSeconds;
 }

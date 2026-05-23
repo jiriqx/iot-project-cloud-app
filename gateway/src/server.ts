@@ -9,6 +9,7 @@ const MQTT_PASSWORD = process.env.MQTT_PASSWORD!;
 const TOPIC_STATE = 'iot/v1/+/+/state';
 const TOPIC_PING = 'iot/v1/+/+/ping';
 
+const GATEWAY_ID = 'gateway-1';
 const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
 async function start() {
@@ -49,7 +50,7 @@ async function start() {
           console.log(`[MQTT] Device ${deviceMac} came online, sending config...`);
           const timeout = await getTimeoutForDevice(deviceMac);
           if (timeout != null) {
-            const configTopic = `iot/v1/${gatewayId}/${deviceMac}/config`;
+            const configTopic = `iot/v1/${GATEWAY_ID}/${deviceMac}/config`;
             client.publish(configTopic, `timeout=${timeout}`, { qos: 1 }, (err) => {
               if (err) console.error('[MQTT] Failed to publish config:', err);
               else console.log(`[MQTT] Published config to ${configTopic}: timeout=${timeout}`);
