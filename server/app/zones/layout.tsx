@@ -14,7 +14,7 @@ export default function ZonesLayout({ children }: { children: React.ReactNode })
     fetch('/api/zone')
       .then(r => r.json())
       .then(data => setZones((data.zones ?? []).map((z: Zone) => ({ id: z.id, name: z.name }))))
-      .catch(() => {})
+      .catch(() => { })
   }, [pathname])
 
   return (

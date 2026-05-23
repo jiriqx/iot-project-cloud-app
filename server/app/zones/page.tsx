@@ -97,7 +97,7 @@ export default function ZonesPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-gray-900">Správa zón</h1>
           <Link
-            href="/dashboard/zones/create"
+            href="/zones/create"
             className="px-4 py-1.5 text-sm bg-gray-900 text-white rounded hover:bg-gray-700"
           >
             Nová zóna

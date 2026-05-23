@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { ZoneSidebar } from './zones/_components/ZoneSidebar'
+import { ZoneSidebar } from '../zones/_components/ZoneSidebar'
 import { NodeCard } from './_components/NodeCard'
 import { SkeletonLine } from '@/app/_components/Skeleton'
 

@@ -60,7 +60,7 @@ export function CreateZoneForm() {
       }
 
       const { zone } = await res.json()
-      router.push(`/dashboard/zones/${zone.id}`)
+      router.push(`/zones/${zone.id}`)
       router.refresh()
     } catch {
       setServerError('Nepodařilo se vytvořit zónu.')
@@ -89,9 +89,8 @@ export function CreateZoneForm() {
           name="name"
           type="text"
           placeholder="např. Chodba A — 1. patro"
-          className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-            errors.name ? 'border-red-400' : 'border-gray-300'
-          }`}
+          className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.name ? 'border-red-400' : 'border-gray-300'
+            }`}
         />
         <FieldError message={errors.name} />
       </div>
@@ -109,9 +108,8 @@ export function CreateZoneForm() {
           type="number"
           min={1}
           placeholder="např. 60"
-          className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-            errors.timeoutSeconds ? 'border-red-400' : 'border-gray-300'
-          }`}
+          className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.timeoutSeconds ? 'border-red-400' : 'border-gray-300'
+            }`}
         />
         <FieldError message={errors.timeoutSeconds} />
       </div>
@@ -127,9 +125,8 @@ export function CreateZoneForm() {
           id="sensorSensitivity"
           name="sensorSensitivity"
           defaultValue="MEDIUM"
-          className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-            errors.sensorSensitivity ? 'border-red-400' : 'border-gray-300'
-          }`}
+          className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.sensorSensitivity ? 'border-red-400' : 'border-gray-300'
+            }`}
         >
           <option value="LOW">Nízká</option>
           <option value="MEDIUM">Střední</option>
@@ -149,9 +146,8 @@ export function CreateZoneForm() {
           id="lightingMode"
           name="lightingMode"
           defaultValue="automatic"
-          className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-            errors.lightingMode ? 'border-red-400' : 'border-gray-300'
-          }`}
+          className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.lightingMode ? 'border-red-400' : 'border-gray-300'
+            }`}
         >
           <option value="automatic">Automatický</option>
           <option value="manual">Manuální</option>
@@ -177,9 +173,8 @@ export function CreateZoneForm() {
               id="nightModeStart"
               name="nightModeStart"
               type="time"
-              className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.nightModeStart ? 'border-red-400' : 'border-gray-300'
-              }`}
+              className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.nightModeStart ? 'border-red-400' : 'border-gray-300'
+                }`}
             />
             <FieldError message={errors.nightModeStart} />
           </div>
@@ -194,9 +189,8 @@ export function CreateZoneForm() {
               id="nightModeEnd"
               name="nightModeEnd"
               type="time"
-              className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.nightModeEnd ? 'border-red-400' : 'border-gray-300'
-              }`}
+              className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.nightModeEnd ? 'border-red-400' : 'border-gray-300'
+                }`}
             />
             <FieldError message={errors.nightModeEnd} />
           </div>
