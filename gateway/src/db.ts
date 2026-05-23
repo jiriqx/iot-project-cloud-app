@@ -21,6 +21,31 @@ export const Ping =
   mongoose.models.Ping ??
   mongoose.model('Ping', pingSchema);
 
+const nodeSchema = new mongoose.Schema({
+  zoneId: { type: mongoose.Schema.Types.ObjectId, ref: 'Zone' },
+  externalId: { type: String },
+  mac: { type: String },
+  status: { type: String },
+});
+
+export const Node =
+  mongoose.models.Node ??
+  mongoose.model('Node', nodeSchema);
+
+const zoneSchema = new mongoose.Schema({
+  ownerId: { type: mongoose.Schema.Types.ObjectId },
+  name: { type: String },
+  timeoutSeconds: { type: Number },
+  sensorSensitivity: { type: String },
+  lightingMode: { type: String },
+  nightModeStart: { type: String },
+  nightModeEnd: { type: String },
+});
+
+export const Zone =
+  mongoose.models.Zone ??
+  mongoose.model('Zone', zoneSchema);
+
 let connected = false;
 
 export async function connectDb(): Promise<void> {
@@ -41,11 +66,25 @@ export async function saveStateChange(
   await StateChange.create({ gatewayId, deviceMac, state, trigger });
 }
 
-export async function savePing(deviceMac: string): Promise<void> {
+export async function savePing(deviceMac: string): Promise<Date | null> {
   await connectDb();
+  const existing = await Ping.findOne({ deviceMac });
+  const previousPing = existing?.lastPing ?? null;
+
   await Ping.findOneAndUpdate(
     { deviceMac },
     { lastPing: new Date() },
     { upsert: true },
   );
+
+  return previousPing;
+}
+
+export async function getTimeoutForDevice(deviceMac: string): Promise<number | null> {
+  await connectDb();
+  const node = await Node.findOne({ mac: deviceMac });
+  if (!node) return null;
+  const zone = await Zone.findById(node.zoneId);
+  if (!zone) return null;
+  return zone.timeoutSeconds ?? null;
 }

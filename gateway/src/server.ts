@@ -1,5 +1,5 @@
 import mqtt from 'mqtt';
-import { connectDb, saveStateChange, savePing } from './db';
+import { connectDb, saveStateChange, savePing, getTimeoutForDevice } from './db';
 
 const MQTT_HOST = process.env.MQTT_HOST!;
 const MQTT_PORT = Number(process.env.MQTT_PORT ?? 1883);
@@ -8,6 +8,8 @@ const MQTT_PASSWORD = process.env.MQTT_PASSWORD!;
 
 const TOPIC_STATE = 'iot/v1/+/+/state';
 const TOPIC_PING = 'iot/v1/+/+/ping';
+
+const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
 async function start() {
   await connectDb();
@@ -36,8 +38,24 @@ async function start() {
     if (msgType === 'ping') {
       console.log(`[MQTT] Ping from ${deviceMac}`);
       try {
-        await savePing(deviceMac);
+        const lastPing = await savePing(deviceMac);
         console.log('[DB] Ping saved');
+
+        // Check if device was offline (gap > 5 minutes)
+        const now = Date.now();
+        const wasOffline = !lastPing || (now - lastPing.getTime()) > OFFLINE_THRESHOLD_MS;
+
+        if (wasOffline) {
+          console.log(`[MQTT] Device ${deviceMac} came online, sending config...`);
+          const timeout = await getTimeoutForDevice(deviceMac);
+          if (timeout != null) {
+            const configTopic = `iot/v1/${gatewayId}/${deviceMac}/config`;
+            client.publish(configTopic, `timeout=${timeout}`, { qos: 1 }, (err) => {
+              if (err) console.error('[MQTT] Failed to publish config:', err);
+              else console.log(`[MQTT] Published config to ${configTopic}: timeout=${timeout}`);
+            });
+          }
+        }
       } catch (err) {
         console.error('[DB] Failed to save ping:', err);
       }
